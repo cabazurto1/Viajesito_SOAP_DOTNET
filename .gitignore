@@ -1,0 +1,177 @@
+###############################################################################
+# .gitignore ‑ Visual Studio 2022 – soluciones mixtas (.NET Framework / .NET) #
+# Cubre: WCF, ASP.NET, MAUI/Xamarin, WinForms, WPF, WinUI, Consolas           #
+###############################################################################
+
+########################
+# Archivos de usuario  #
+########################
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.rsuser
+*.skp
+*.userprefs          # Xamarin/VS for Mac
+
+#############################
+# Carpetas de VS y extens.  #
+#############################
+.vs/
+.vscode/
+.idea/                # Rider / JetBrains IDEs
+*.DotSettings.user
+_ReSharper*/          # ReSharper
+*.ncrunch*            # NCrunch
+*.sonarlint/*
+
+########################
+# Resultados de build   #
+########################
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+[Dd]ebug*/            # Debug, DebugPublic
+[Rr]elease*/          # Release, Releases
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+msbuild.log
+Build*/               # BuildLogs, BuildArtifacts
+*.Cache/
+*.cache
+*.ilk
+*.meta
+*.obj
+*.pdb
+*.rsp
+*.tmp
+*.tmp_proj
+*.log                 # logs sueltos de MSBuild
+
+########################
+# Paquetes / depend.   #
+########################
+# NuGet (estilo packages.config)
+packages/
+# Artifacts de empaquetado
+*.nupkg
+*.snupkg
+# npm / Yarn / PNPM (front‑end ASP.NET Core o MAUI Blazor)
+node_modules/
+bower_components/
+dist/
+wwwroot/lib/
+
+########################
+# Test & Coverage      #
+########################
+[Tt]est[Rr]esult*/
+*.coverage
+*.coveragexml
+*.codecov
+*.trx
+*.xcresult/
+*.cobertura.xml
+buildreports/
+
+########################
+# IIS Express / Web    #
+########################
+iisexpress/
+*.dbmdl
+*.publishsettings
+# Logs y archivos temporales de ASP.NET
+App_Data/Logs/
+App_Data/*.mdf
+# Config transform back‑ups
+*.*.config.php?
+*.*.config.backup
+
+########################
+# WCF / Service Refs   #
+########################
+*.svcinfo*
+*.svcmap
+*.svc
+# Si generas WCF en /Service References/, ignora su bin/obj internos
+Service References/*/obj/
+Service References/*/bin/
+
+########################
+# Mobile (Android/iOS) #
+########################
+*.apk
+*.apks
+*.aab
+*.ipa
+*.xcarchive
+*.xcuserstate
+*.DS_Store
+# Carpeta intermediaria de MAUI/Xamarin
+obj/Debug/*-android*/       # (ya cubierto por obj/ pero explícito)
+obj/Debug/*-ios*/
+
+########################
+# WinUI / UWP          #
+########################
+AppPackages/
+BundleArtifacts/
+*.appx
+*.appxsym
+*.appxupload
+*.msix*
+*.msixsym
+
+########################
+# Otros binarios       #
+########################
+*.exe
+*.dll
+*.mdb
+*.dylib
+*.so
+*.a
+*.lib
+*.prf
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+########################
+# Archivos de diseño   #
+########################
+*.Designer.cs
+*.g.cs
+*.g.i.cs
+*.AssemblyInfo.cs      # generados por SDK‑style; normalmente no se versiona
+*.xaml.cs.g            # WPF g‑archivos
+
+########################
+# Contenedores / Cloud #
+########################
+docker-compose.override.yml
+.env
+**/secrets.json
+*.local.settings.json  # Functions / Azure
+
+########################
+# Copias y backups     #
+########################
+*.orig
+*.bak
+*.backup
+*.old
+
+########################
+# Compilaciones previas#
+########################
+/Publish/
+artifacts/
+out/
+
+# FIN

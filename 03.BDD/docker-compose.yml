@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-lts
+    container_name: aerolineas_condor_sqlserver
+    restart: always
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "root"
+      MSSQL_PID: "Express"  # Puedes usar "Developer" también
+    ports:
+      - "1433:1433"
+    volumes:
+      - ./scripts:/docker-entrypoint-initdb.d  # Scripts personalizados (ver nota abajo)
