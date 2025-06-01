@@ -36,23 +36,34 @@ namespace ec.edu.monster.servicio
             {
                 var cmd = new SqlCommand("SELECT * FROM vuelos", cn);
                 var dr = cmd.ExecuteReader();
+
+                var vuelosTemp = new List<Vuelos>();
                 while (dr.Read())
                 {
-                    lista.Add(new Vuelos
+                    vuelosTemp.Add(new Vuelos
                     {
                         IdVuelo = (int)dr["id_vuelo"],
                         CodigoVuelo = dr["codigo_vuelo"].ToString(),
                         Valor = (decimal)dr["valor"],
                         HoraSalida = (DateTime)dr["hora_salida"],
                         Capacidad = (int)dr["capacidad"],
-                        Disponibles = (int)dr["disponibles"],
                         IdCiudadOrigen = (int)dr["id_ciudad_origen"],
                         IdCiudadDestino = (int)dr["id_ciudad_destino"]
                     });
                 }
+
+                dr.Close();
+
+                foreach (var vuelo in vuelosTemp)
+                {
+                    int vendidos = ObtenerBoletosVendidos(vuelo.IdVuelo);
+                    vuelo.Disponibles = vuelo.Capacidad - vendidos;
+                    lista.Add(vuelo);
+                }
             }
             return lista;
         }
+
 
         public List<Usuarios> GetUsuarios()
         {
@@ -210,23 +221,53 @@ namespace ec.edu.monster.servicio
         public bool Comprar(CompraBoletoRequest request)
         {
             using (var cn = ConexionBD.ObtenerConexion())
+            using (var trans = cn.BeginTransaction()) // Añadimos transacción
             {
-                for (int i = 0; i < request.Cantidad; i++)
+                try
                 {
-                    var cmd = new SqlCommand(@"
-                        INSERT INTO boletos (numero_boleto, id_vuelo, id_usuario, precio_compra)
-                        VALUES (@num, @vuelo, @usuario, 
-                            (SELECT valor FROM vuelos WHERE id_vuelo = @vuelo))", cn);
+                    for (int i = 0; i < request.Cantidad; i++)
+                    {
+                        var cmd = new SqlCommand(@"
+                    INSERT INTO boletos (numero_boleto, id_vuelo, id_usuario, precio_compra)
+                    VALUES (@num, @vuelo, @usuario, 
+                        (SELECT valor FROM vuelos WHERE id_vuelo = @vuelo))", cn, trans);
 
-                    cmd.Parameters.AddWithValue("@num", Guid.NewGuid().ToString().Substring(0, 10).ToUpper());
-                    cmd.Parameters.AddWithValue("@vuelo", request.IdVuelo);
-                    cmd.Parameters.AddWithValue("@usuario", request.IdUsuario);
-                    if (cmd.ExecuteNonQuery() <= 0)
+                        cmd.Parameters.AddWithValue("@num", Guid.NewGuid().ToString().Substring(0, 10).ToUpper());
+                        cmd.Parameters.AddWithValue("@vuelo", request.IdVuelo);
+                        cmd.Parameters.AddWithValue("@usuario", request.IdUsuario);
+
+                        if (cmd.ExecuteNonQuery() <= 0)
+                        {
+                            trans.Rollback();
+                            return false;
+                        }
+                    }
+
+                    var updateCmd = new SqlCommand(@"
+                UPDATE vuelos 
+                SET disponibles = disponibles - @cantidad 
+                WHERE id_vuelo = @vuelo AND disponibles >= @cantidad", cn, trans);
+
+                    updateCmd.Parameters.AddWithValue("@cantidad", request.Cantidad);
+                    updateCmd.Parameters.AddWithValue("@vuelo", request.IdVuelo);
+
+                    if (updateCmd.ExecuteNonQuery() <= 0)
+                    {
+                        trans.Rollback();
                         return false;
+                    }
+
+                    trans.Commit();
+                    return true;
                 }
-                return true;
+                catch
+                {
+                    trans.Rollback();
+                    return false;
+                }
             }
         }
+
 
         public Usuarios Login(string username, string password)
         {
@@ -597,6 +638,16 @@ namespace ec.edu.monster.servicio
             }
             return lista;
         }
+        public int ObtenerBoletosVendidos(int idVuelo)
+        {
+            using (var cn = ConexionBD.ObtenerConexion())
+            {
+                var cmd = new SqlCommand("SELECT COUNT(*) FROM boletos WHERE id_vuelo = @id", cn);
+                cmd.Parameters.AddWithValue("@id", idVuelo);
+                return (int)cmd.ExecuteScalar();
+            }
+        }
+
 
 
         public List<Vuelos> BuscarVuelos(string origen, string destino, DateTime fechaSalida)
