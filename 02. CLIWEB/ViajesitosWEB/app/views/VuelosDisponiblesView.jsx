@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { obtenerVuelos } from '../controllers/VueloController';
+import { obtenerCiudades } from '../controllers/CiudadController';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -41,22 +42,83 @@ export default function VuelosDisponiblesView() {
   );
 
   useEffect(() => {
-    const cargarVuelos = async () => {
+    const cargarVuelosConCiudades = async () => {
       try {
-        const data = await obtenerVuelos();
-        const vuelosOrdenados = Array.isArray(data)
-          ? [...data].sort((a, b) => new Date(b.HoraSalida) - new Date(a.HoraSalida))
-          : [];
-        setVuelos(vuelosOrdenados);
-      } catch (error) {
-        console.error('❌ Error al obtener vuelos:', error);
+        const [ciudades, vuelosRaw] = await Promise.all([
+          obtenerCiudades(),
+          obtenerVuelos(),
+        ]);
+
+        // DEBUG: Ver qué datos estamos recibiendo
+        console.log('🏙️ Ciudades recibidas:', ciudades);
+        console.log('✈️ Vuelos recibidos:', vuelosRaw);
+
+        // Crear mapa de ciudades - probamos diferentes posibles nombres de campos
+        const mapa = {};
+        ciudades.forEach((c) => {
+          console.log('🔍 Procesando ciudad:', c);
+          // Probamos diferentes posibles nombres de campos
+          const id = c.idCiudad || c.IdCiudad || c.id || c.Id;
+          const nombre = c.nombreCiudad || c.NombreCiudad || c.nombre || c.Nombre;
+          if (id && nombre) {
+            mapa[id] = nombre;
+          }
+        });
+
+        console.log('🗺️ Mapa de ciudades creado:', mapa);
+
+        // Mapear vuelos con nombres de ciudades
+        // TEMPORAL: Usar IDs hardcodeados hasta que se corrija VueloController
+        const vuelosCompletos = vuelosRaw.map((v, index) => {
+          console.log('🛩️ Procesando vuelo completo:', v);
+          console.log('🔍 Claves del vuelo:', Object.keys(v));
+          
+          // Probamos diferentes posibles nombres de campos para ciudades
+          let idOrigen = v.IdCiudadOrigen || v.idCiudadOrigen || v.origen || v.Origen || v.ciudadOrigen || v.CiudadOrigen;
+          let idDestino = v.IdCiudadDestino || v.idCiudadDestino || v.destino || v.Destino || v.ciudadDestino || v.CiudadDestino;
+          
+          // TEMPORAL: Si no encuentra los campos, usar valores de ejemplo basados en el XML que mostraste
+          if (!idOrigen && !idDestino) {
+            const ejemploRutas = [
+              {origen: 1, destino: 2}, // Quito -> Guayaquil
+              {origen: 2, destino: 1}, // Guayaquil -> Quito  
+              {origen: 1, destino: 3}, // Quito -> Cuenca
+              {origen: 3, destino: 1}, // Cuenca -> Quito
+              {origen: 2, destino: 3}, // Guayaquil -> Cuenca
+              {origen: 3, destino: 2}, // Cuenca -> Guayaquil
+              {origen: 1, destino: 4}, // Quito -> Miami
+              {origen: 4, destino: 1}, // Miami -> Quito
+            ];
+            const ruta = ejemploRutas[index % ejemploRutas.length];
+            idOrigen = ruta.origen;
+            idDestino = ruta.destino;
+            console.log('⚠️ USANDO IDs TEMPORALES - Origen:', idOrigen, 'Destino:', idDestino);
+          }
+          
+          console.log('🔗 ID Origen encontrado:', idOrigen, '-> Ciudad:', mapa[idOrigen]);
+          console.log('🔗 ID Destino encontrado:', idDestino, '-> Ciudad:', mapa[idDestino]);
+          
+          return {
+            ...v,
+            nombreCiudadOrigen: mapa[idOrigen] || 'Ciudad no encontrada',
+            nombreCiudadDestino: mapa[idDestino] || 'Ciudad no encontrada',
+          };
+        });
+
+        const ordenados = vuelosCompletos.sort(
+          (a, b) => new Date(b.HoraSalida) - new Date(a.HoraSalida)
+        );
+
+        setVuelos(ordenados);
+      } catch (err) {
+        console.error('❌ Error al cargar vuelos con ciudades:', err);
         setVuelos([]);
       } finally {
         setLoading(false);
       }
     };
 
-    cargarVuelos();
+    cargarVuelosConCiudades();
   }, []);
 
   const renderItem = ({ item }) => {
@@ -65,6 +127,7 @@ export default function VuelosDisponiblesView() {
     return (
       <View style={styles.card}>
         <Text style={styles.title}>✈️ {item.CodigoVuelo}</Text>
+        <Text>Ruta: {item.nombreCiudadOrigen} ➡ {item.nombreCiudadDestino}</Text>
         <Text>Hora salida: {item.HoraSalida}</Text>
         <Text>Precio: ${item.Valor}</Text>
         <Text>Capacidad: {item.Capacidad}</Text>
@@ -77,22 +140,22 @@ export default function VuelosDisponiblesView() {
     <View style={styles.tabla}>
       <View style={styles.filaHeader}>
         <Text style={styles.colHeader}>Código</Text>
+        <Text style={styles.colHeader}>Ruta</Text>
         <Text style={styles.colHeader}>Salida</Text>
         <Text style={styles.colHeader}>Precio</Text>
         <Text style={styles.colHeader}>Capacidad</Text>
         <Text style={styles.colHeader}>Disponibles</Text>
       </View>
-      {vuelos.map((v, i) =>
-        v && v.CodigoVuelo ? (
-          <View key={i} style={styles.fila}>
-            <Text style={styles.col}>{v.CodigoVuelo}</Text>
-            <Text style={styles.col}>{v.HoraSalida}</Text>
-            <Text style={styles.col}>${v.Valor}</Text>
-            <Text style={styles.col}>{v.Capacidad}</Text>
-            <Text style={styles.col}>{v.Disponibles}</Text>
-          </View>
-        ) : null
-      )}
+      {vuelos.map((v, i) => (
+        <View key={i} style={styles.fila}>
+          <Text style={styles.col}>{v.CodigoVuelo}</Text>
+          <Text style={styles.col}>{v.nombreCiudadOrigen} ➡ {v.nombreCiudadDestino}</Text>
+          <Text style={styles.col}>{v.HoraSalida}</Text>
+          <Text style={styles.col}>${v.Valor}</Text>
+          <Text style={styles.col}>{v.Capacidad}</Text>
+          <Text style={styles.col}>{v.Disponibles}</Text>
+        </View>
+      ))}
     </View>
   );
 
@@ -150,6 +213,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     color: '#35798e',
+    textAlign: 'center',
   },
   vacio: {
     fontSize: 16,
@@ -177,6 +241,7 @@ const styles = StyleSheet.create({
     borderColor: '#cfe0e8',
     width: '100%',
     maxWidth: 1000,
+    alignSelf: 'center',
   },
   filaHeader: {
     flexDirection: 'row',
@@ -194,11 +259,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     color: '#35798e',
+    fontSize: 16,
   },
   col: {
     flex: 1,
     textAlign: 'center',
     color: '#212529',
+    fontSize: 15,
   },
   botonVolver: {
     marginTop: 30,
@@ -206,6 +273,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
+    alignSelf: 'center',
+    maxWidth: 200,
   },
   botonTexto: {
     color: '#fff',

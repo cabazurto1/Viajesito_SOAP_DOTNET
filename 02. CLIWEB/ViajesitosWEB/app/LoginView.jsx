@@ -70,7 +70,7 @@ export default function LoginView() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Image source={require('../assets/images/logo_monster.png')} style={styles.logo} />
-      <Text style={styles.title}>MONSTER - VIAJESITOS</Text>
+      <Text style={styles.title}>MONSTER - Viajecitos SA.</Text>
 
       <View style={styles.inputWrapper}>
         <TextInput

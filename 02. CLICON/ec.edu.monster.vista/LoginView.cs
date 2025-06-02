@@ -14,7 +14,7 @@ namespace ec.edu.monster.vista
         {
             while (true)
             {
-                Console.WriteLine("===== BIENVENIDO MONSTER VIAJESITOS =====");
+                Console.WriteLine("===== BIENVENIDO MONSTER VIAJECITOS SA =====");
                 Console.WriteLine("1. Iniciar Sesión");
                 Console.WriteLine("2. Registrarse");
                 Console.WriteLine("3. Salir");

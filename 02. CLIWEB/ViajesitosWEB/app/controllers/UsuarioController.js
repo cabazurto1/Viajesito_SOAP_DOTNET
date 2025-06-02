@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 
 const parser = new XMLParser({ ignoreAttributes: false });
-const endpoint = 'http://192.168.18.158:8094/ec.edu.monster.controlador/AeroCondorController.svc';
+const endpoint = 'http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc';
 
 // LOGIN
 export const login = async (username, password) => {
@@ -35,7 +35,9 @@ export const login = async (username, password) => {
       Nombre: result['a:Nombre'],
       Username: result['a:Username'],
       Password: result['a:Password'],
-      Telefono: result['a:Telefono']
+      Telefono: result['a:Telefono'],
+      Cedula: result['a:Cedula'],
+      Correo: result['a:Correo']
     };
   }
 
@@ -55,6 +57,8 @@ export const crearUsuario = async (usuario) => {
           <ec:Username>${usuario.Username}</ec:Username>
           <ec:Password>${usuario.Password}</ec:Password>
           <ec:Telefono>${usuario.Telefono}</ec:Telefono>
+          <ec:Cedula>${usuario.Cedula}</ec:Cedula>
+          <ec:Correo>${usuario.Correo}</ec:Correo>
         </tem:usuario>
       </tem:CrearUsuario>
     </soapenv:Body>
@@ -89,6 +93,8 @@ export const editarUsuario = async (usuario) => {
           <ec:Username>${usuario.Username}</ec:Username>
           <ec:Password>${usuario.Password}</ec:Password>
           <ec:Telefono>${usuario.Telefono}</ec:Telefono>
+          <ec:Cedula>${usuario.Cedula}</ec:Cedula>
+          <ec:Correo>${usuario.Correo}</ec:Correo>
         </tem:usuario>
       </tem:EditarUsuario>
     </soapenv:Body>
@@ -163,7 +169,16 @@ export const getUsuarios = async () => {
 
   if (!usuarios) return [];
 
-  return Array.isArray(usuarios) ? usuarios : [usuarios];
+  const list = Array.isArray(usuarios) ? usuarios : [usuarios];
+  return list.map(usuario => ({
+    IdUsuario: usuario['a:IdUsuario'],
+    Nombre: usuario['a:Nombre'],
+    Username: usuario['a:Username'],
+    Password: usuario['a:Password'],
+    Telefono: usuario['a:Telefono'],
+    Cedula: usuario['a:Cedula'],
+    Correo: usuario['a:Correo']
+  }));
 };
 
 // OBTENER BOLETOS POR USUARIO
@@ -195,3 +210,39 @@ export const obtenerBoletosPorUsuario = async (idUsuario) => {
 
   return Array.isArray(boletos) ? boletos : [boletos];
 };
+
+export const obtenerUsuarioPorId = async (id) => {
+  const body = `
+  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+    <soapenv:Header/>
+    <soapenv:Body>
+      <tem:ObtenerUsuarioPorId>
+        <tem:id>${id}</tem:id>
+      </tem:ObtenerUsuarioPorId>
+    </soapenv:Body>
+  </soapenv:Envelope>`;
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/xml;charset=UTF-8',
+      SOAPAction: 'http://tempuri.org/IAeroCondorController/ObtenerUsuarioPorId'
+    },
+    body
+  });
+
+  const xml = await response.text();
+  const json = parser.parse(xml);
+  const result = json['s:Envelope']?.['s:Body']?.['ObtenerUsuarioPorIdResponse']?.['ObtenerUsuarioPorIdResult'];
+
+  return result ? {
+    IdUsuario: result['a:IdUsuario'],
+    Nombre: result['a:Nombre'],
+    Username: result['a:Username'],
+    Password: result['a:Password'],
+    Telefono: result['a:Telefono'],
+    Cedula: result['a:Cedula'],
+    Correo: result['a:Correo']
+  } : null;
+};
+

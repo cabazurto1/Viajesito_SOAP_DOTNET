@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 using ServiceReference1;
 using ec.edu.monster.controlador;
 
@@ -11,6 +12,7 @@ namespace ec.edu.monster.vista
     {
         private static readonly VueloController vuelosController = new VueloController();
         private static readonly BoletoController boletosController = new BoletoController();
+
 
         public static async Task MostrarAsync(Usuarios usuario)
         {
@@ -22,6 +24,7 @@ namespace ec.edu.monster.vista
                 Console.WriteLine("3. Comprar boletos");
                 Console.WriteLine("4. Cerrar sesión");
                 Console.Write("Seleccione una opción: ");
+
                 var opcion = Console.ReadLine();
 
                 switch (opcion)
@@ -50,19 +53,22 @@ namespace ec.edu.monster.vista
             List<Boletos> boletos = await boletosController.ObtenerPorUsuarioAsync(usuario.IdUsuario);
 
             Console.WriteLine("\n===== TUS BOLETOS =====");
+
             if (boletos == null || boletos.Count == 0)
             {
                 Console.WriteLine("No tienes boletos registrados.");
                 return;
             }
 
-            Console.WriteLine("{0,-18} {1,-10} {2,-22} {3,-10}", "Número Boleto", "ID Vuelo", "Fecha Compra", "Precio");
+            Console.WriteLine("{0,-18} {1,-10} {2,-22} {3,-10}",
+                "Número Boleto", "ID Vuelo", "Fecha Compra", "Precio");
             Console.WriteLine(new string('-', 70));
 
             foreach (var boleto in boletos)
             {
                 string fecha = boleto.FechaCompra?.ToString("yyyy-MM-dd HH:mm") ?? "N/A";
-                Console.WriteLine("{0,-18} {1,-10} {2,-22} ${3,-8}", boleto.NumeroBoleto, boleto.IdVuelo, fecha, boleto.PrecioCompra);
+                Console.WriteLine("{0,-18} {1,-10} {2,-22} ${3,-8}",
+                    boleto.NumeroBoleto, boleto.IdVuelo, fecha, boleto.PrecioCompra);
             }
         }
 
@@ -71,18 +77,46 @@ namespace ec.edu.monster.vista
             List<Vuelos> vuelos = await vuelosController.ObtenerTodosAsync();
 
             Console.WriteLine("\n===== TODOS LOS VUELOS =====");
-            Console.WriteLine("{0,-5} {1,-10} {2,-10} {3,-10} {4,-20} {5,-10} {6,-10}",
+
+            if (vuelos == null || vuelos.Count == 0)
+            {
+                Console.WriteLine("No hay vuelos disponibles.");
+                return;
+            }
+
+            // Mapeo directo de IDs a nombres de ciudades
+            var mapaCiudades = new Dictionary<int, string>
+            {
+                { 1, "Quito" },
+                { 2, "Guayaquil" },
+                { 3, "Cuenca" },
+                { 4, "Miami" },
+                { 5, "Bogotá" },
+                { 6, "Lima" }
+            };
+
+            Console.WriteLine("{0,-5} {1,-10} {2,-15} {3,-15} {4,-20} {5,-10} {6,-10}",
                 "ID", "Código", "Origen", "Destino", "Hora Salida", "Precio", "Disponibles");
-            Console.WriteLine(new string('-', 90));
+            Console.WriteLine(new string('-', 100));
 
             foreach (var vuelo in vuelos)
             {
                 string hora = vuelo.HoraSalida.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
-                Console.WriteLine("{0,-5} {1,-10} {2,-10} {3,-10} {4,-20} ${5,-8} {6,-10}",
+
+                // Obtener nombres de ciudades o mostrar ID si no se encuentra
+                string nombreOrigen = mapaCiudades.ContainsKey(vuelo.IdCiudadOrigen)
+                    ? mapaCiudades[vuelo.IdCiudadOrigen]
+                    : $"ID:{vuelo.IdCiudadOrigen}";
+
+                string nombreDestino = mapaCiudades.ContainsKey(vuelo.IdCiudadDestino)
+                    ? mapaCiudades[vuelo.IdCiudadDestino]
+                    : $"ID:{vuelo.IdCiudadDestino}";
+
+                Console.WriteLine("{0,-5} {1,-10} {2,-15} {3,-15} {4,-20} ${5,-8} {6,-10}",
                     vuelo.IdVuelo,
                     vuelo.CodigoVuelo,
-                    vuelo.IdCiudadOrigen,
-                    vuelo.IdCiudadDestino,
+                    nombreOrigen,
+                    nombreDestino,
                     hora,
                     vuelo.Valor,
                     vuelo.Disponibles);

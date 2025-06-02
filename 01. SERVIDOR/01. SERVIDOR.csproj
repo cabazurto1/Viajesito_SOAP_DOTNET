@@ -76,6 +76,7 @@
     <Compile Include="ec.edu.monster.modelo\Boletos.cs" />
     <Compile Include="ec.edu.monster.modelo\Ciudades.cs" />
     <Compile Include="ec.edu.monster.modelo\CompraBoletoRequest.cs" />
+    <Compile Include="ec.edu.monster.modelo\Facturas.cs" />
     <Compile Include="ec.edu.monster.modelo\Usuarios.cs" />
     <Compile Include="ec.edu.monster.modelo\Vuelos.cs" />
     <Compile Include="ec.edu.monster.servicio\AeroCondorService.cs" />

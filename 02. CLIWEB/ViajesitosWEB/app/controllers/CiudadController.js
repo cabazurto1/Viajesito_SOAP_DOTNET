@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 
 const parser = new XMLParser({ ignoreAttributes: false });
-const endpoint = 'http://192.168.18.158:8094/ec.edu.monster.controlador/AeroCondorController.svc';
+const endpoint = 'http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc';
 
 export const obtenerCiudades = async () => {
   const body = `
@@ -27,15 +27,19 @@ export const obtenerCiudades = async () => {
 
   if (!result || !result['a:Ciudades']) return [];
 
-  const lista = Array.isArray(result['a:Ciudades']) ? result['a:Ciudades'] : [result['a:Ciudades']];
+  const ciudadesRaw = result['a:Ciudades'];
 
-  // Mapear los datos útiles
-  return lista.map(c => ({
+  const lista = Array.isArray(ciudadesRaw) ? ciudadesRaw : [ciudadesRaw];
+
+  const mapeadas = lista.map(c => ({
     id: c['a:IdCiudad'],
     codigo: c['a:CodigoCiudad'],
     nombre: c['a:NombreCiudad']
   }));
+
+  return mapeadas;
 };
+
 
 
 export const obtenerCiudadPorId = async (idCiudad) => {
