@@ -175,3 +175,6 @@ artifacts/
 out/
 
 # FIN
+/02. CLIESC/viajecito_esc/nbproject/private/
+/02. CLIESC/viajecito_esc_soap/nbproject/private/
+/02. CLIESC/viajecito_esc_soap/build/
