@@ -22,9 +22,14 @@ public class UsuariosController {
             new QName(NAMESPACE, "Password"), String.class, usuario.getPassword()));
         soapUsuario.setTelefono(new JAXBElement<>(
             new QName(NAMESPACE, "Telefono"), String.class, usuario.getTelefono()));
+        soapUsuario.setCedula(new JAXBElement<>(
+            new QName(NAMESPACE, "Cedula"), String.class, usuario.getCedula()));
+        soapUsuario.setCorreo(new JAXBElement<>(
+            new QName(NAMESPACE, "Correo"), String.class, usuario.getCorreo()));
 
         return AeroCondorClient.crearUsuario(soapUsuario);
     }
+
 
     public Usuario login(String username, String password) {
         Usuarios soapUsuario = AeroCondorClient.login(username, password);
@@ -46,6 +51,12 @@ public class UsuariosController {
         }
         if (soapUsuario.getTelefono() != null) {
             usuario.setTelefono(soapUsuario.getTelefono().getValue());
+        }
+        if (soapUsuario.getCorreo()!= null) {
+            usuario.setCorreo(soapUsuario.getCorreo().getValue());
+        }
+        if (soapUsuario.getCedula()!= null) {
+            usuario.setCedula(soapUsuario.getCedula().getValue());
         }
 
         return usuario;

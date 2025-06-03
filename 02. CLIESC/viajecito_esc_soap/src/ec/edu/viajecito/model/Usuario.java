@@ -14,6 +14,8 @@ public class Usuario {
     private String username;
     private String password;
     private String telefono;
+    private String cedula;
+    private String correo;
 
     public Usuario() {
     }
@@ -22,11 +24,14 @@ public class Usuario {
         this.idUsuario = idUsuario;
     }
 
-    public Usuario(Integer idUsuario, String nombre, String username, String password) {
+    public Usuario(Integer idUsuario, String nombre, String username, String password, String telefono, String cedula, String correo) {
         this.idUsuario = idUsuario;
         this.nombre = nombre;
         this.username = username;
         this.password = password;
+        this.telefono = telefono;
+        this.cedula = cedula;
+        this.correo = correo;
     }
 
     public Integer getIdUsuario() {
@@ -69,8 +74,26 @@ public class Usuario {
         this.telefono = telefono;
     }
 
+    public String getCedula() {
+        return cedula;
+    }
+
+    public void setCedula(String cedula) {
+        this.cedula = cedula;
+    }
+
+    public String getCorreo() {
+        return correo;
+    }
+
+    public void setCorreo(String correo) {
+        this.correo = correo;
+    }
+
     @Override
     public String toString() {
         return "Usuario[ idUsuario=" + idUsuario + " ]";
     }
+    
+    
 }

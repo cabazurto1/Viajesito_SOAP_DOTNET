@@ -209,6 +209,8 @@ namespace ServiceReference1
         
         private int IdVueloField;
         
+        private System.Nullable<int> IdFacturaField;
+        
         [System.Runtime.Serialization.DataMemberAttribute()]
         public int IdBoleto
         {
@@ -286,6 +288,19 @@ namespace ServiceReference1
                 this.IdVueloField = value;
             }
         }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(Order=6)]
+        public System.Nullable<int> IdFactura
+        {
+            get
+            {
+                return this.IdFacturaField;
+            }
+            set
+            {
+                this.IdFacturaField = value;
+            }
+        }
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
@@ -356,6 +371,10 @@ namespace ServiceReference1
         
         private string TelefonoField;
         
+        private string CedulaField;
+        
+        private string CorreoField;
+        
         [System.Runtime.Serialization.DataMemberAttribute()]
         public int IdUsuario
         {
@@ -418,6 +437,144 @@ namespace ServiceReference1
             set
             {
                 this.TelefonoField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(Order=5)]
+        public string Cedula
+        {
+            get
+            {
+                return this.CedulaField;
+            }
+            set
+            {
+                this.CedulaField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(Order=6)]
+        public string Correo
+        {
+            get
+            {
+                return this.CorreoField;
+            }
+            set
+            {
+                this.CorreoField = value;
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="Facturas", Namespace="http://schemas.datacontract.org/2004/07/ec.edu.monster.modelo")]
+    public partial class Facturas : object
+    {
+        
+        private int IdFacturaField;
+        
+        private string NumeroFacturaField;
+        
+        private int IdUsuarioField;
+        
+        private decimal PrecioSinIVAField;
+        
+        private decimal PrecioConIVAField;
+        
+        private System.DateTime FechaFacturaField;
+        
+        private ServiceReference1.Boletos[] BoletosRelacionadosField;
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public int IdFactura
+        {
+            get
+            {
+                return this.IdFacturaField;
+            }
+            set
+            {
+                this.IdFacturaField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public string NumeroFactura
+        {
+            get
+            {
+                return this.NumeroFacturaField;
+            }
+            set
+            {
+                this.NumeroFacturaField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(Order=2)]
+        public int IdUsuario
+        {
+            get
+            {
+                return this.IdUsuarioField;
+            }
+            set
+            {
+                this.IdUsuarioField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(Order=3)]
+        public decimal PrecioSinIVA
+        {
+            get
+            {
+                return this.PrecioSinIVAField;
+            }
+            set
+            {
+                this.PrecioSinIVAField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(Order=4)]
+        public decimal PrecioConIVA
+        {
+            get
+            {
+                return this.PrecioConIVAField;
+            }
+            set
+            {
+                this.PrecioConIVAField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(Order=5)]
+        public System.DateTime FechaFactura
+        {
+            get
+            {
+                return this.FechaFacturaField;
+            }
+            set
+            {
+                this.FechaFacturaField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute(Order=6)]
+        public ServiceReference1.Boletos[] BoletosRelacionados
+        {
+            get
+            {
+                return this.BoletosRelacionadosField;
+            }
+            set
+            {
+                this.BoletosRelacionadosField = value;
             }
         }
     }
@@ -522,6 +679,36 @@ namespace ServiceReference1
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAeroCondorController/Login", ReplyAction="http://tempuri.org/IAeroCondorController/LoginResponse")]
         System.Threading.Tasks.Task<ServiceReference1.Usuarios> LoginAsync(string username, string password);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAeroCondorController/GetFacturas", ReplyAction="http://tempuri.org/IAeroCondorController/GetFacturasResponse")]
+        System.Threading.Tasks.Task<ServiceReference1.Facturas[]> GetFacturasAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAeroCondorController/ObtenerFacturaPorId", ReplyAction="http://tempuri.org/IAeroCondorController/ObtenerFacturaPorIdResponse")]
+        System.Threading.Tasks.Task<ServiceReference1.Facturas> ObtenerFacturaPorIdAsync(int id);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAeroCondorController/CrearFactura", ReplyAction="http://tempuri.org/IAeroCondorController/CrearFacturaResponse")]
+        System.Threading.Tasks.Task<bool> CrearFacturaAsync(ServiceReference1.Facturas factura);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAeroCondorController/EditarFactura", ReplyAction="http://tempuri.org/IAeroCondorController/EditarFacturaResponse")]
+        System.Threading.Tasks.Task<bool> EditarFacturaAsync(ServiceReference1.Facturas factura);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAeroCondorController/EliminarFactura", ReplyAction="http://tempuri.org/IAeroCondorController/EliminarFacturaResponse")]
+        System.Threading.Tasks.Task<bool> EliminarFacturaAsync(int id);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAeroCondorController/ContarFacturas", ReplyAction="http://tempuri.org/IAeroCondorController/ContarFacturasResponse")]
+        System.Threading.Tasks.Task<int> ContarFacturasAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAeroCondorController/ListarFacturasPorRango", ReplyAction="http://tempuri.org/IAeroCondorController/ListarFacturasPorRangoResponse")]
+        System.Threading.Tasks.Task<ServiceReference1.Facturas[]> ListarFacturasPorRangoAsync(int desde, int hasta);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAeroCondorController/ObtenerBoletosDeFactura", ReplyAction="http://tempuri.org/IAeroCondorController/ObtenerBoletosDeFacturaResponse")]
+        System.Threading.Tasks.Task<ServiceReference1.Boletos[]> ObtenerBoletosDeFacturaAsync(int idFactura);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAeroCondorController/AsociarBoletosAFactura", ReplyAction="http://tempuri.org/IAeroCondorController/AsociarBoletosAFacturaResponse")]
+        System.Threading.Tasks.Task<bool> AsociarBoletosAFacturaAsync(int idFactura, int[] idsBoletos);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IAeroCondorController/GetFacturasPorUsuario", ReplyAction="http://tempuri.org/IAeroCondorController/GetFacturasPorUsuarioResponse")]
+        System.Threading.Tasks.Task<ServiceReference1.Facturas[]> GetFacturasPorUsuarioAsync(int idUsuario);
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
@@ -734,6 +921,56 @@ namespace ServiceReference1
             return base.Channel.LoginAsync(username, password);
         }
         
+        public System.Threading.Tasks.Task<ServiceReference1.Facturas[]> GetFacturasAsync()
+        {
+            return base.Channel.GetFacturasAsync();
+        }
+        
+        public System.Threading.Tasks.Task<ServiceReference1.Facturas> ObtenerFacturaPorIdAsync(int id)
+        {
+            return base.Channel.ObtenerFacturaPorIdAsync(id);
+        }
+        
+        public System.Threading.Tasks.Task<bool> CrearFacturaAsync(ServiceReference1.Facturas factura)
+        {
+            return base.Channel.CrearFacturaAsync(factura);
+        }
+        
+        public System.Threading.Tasks.Task<bool> EditarFacturaAsync(ServiceReference1.Facturas factura)
+        {
+            return base.Channel.EditarFacturaAsync(factura);
+        }
+        
+        public System.Threading.Tasks.Task<bool> EliminarFacturaAsync(int id)
+        {
+            return base.Channel.EliminarFacturaAsync(id);
+        }
+        
+        public System.Threading.Tasks.Task<int> ContarFacturasAsync()
+        {
+            return base.Channel.ContarFacturasAsync();
+        }
+        
+        public System.Threading.Tasks.Task<ServiceReference1.Facturas[]> ListarFacturasPorRangoAsync(int desde, int hasta)
+        {
+            return base.Channel.ListarFacturasPorRangoAsync(desde, hasta);
+        }
+        
+        public System.Threading.Tasks.Task<ServiceReference1.Boletos[]> ObtenerBoletosDeFacturaAsync(int idFactura)
+        {
+            return base.Channel.ObtenerBoletosDeFacturaAsync(idFactura);
+        }
+        
+        public System.Threading.Tasks.Task<bool> AsociarBoletosAFacturaAsync(int idFactura, int[] idsBoletos)
+        {
+            return base.Channel.AsociarBoletosAFacturaAsync(idFactura, idsBoletos);
+        }
+        
+        public System.Threading.Tasks.Task<ServiceReference1.Facturas[]> GetFacturasPorUsuarioAsync(int idUsuario)
+        {
+            return base.Channel.GetFacturasPorUsuarioAsync(idUsuario);
+        }
+        
         public virtual System.Threading.Tasks.Task OpenAsync()
         {
             return System.Threading.Tasks.Task.Factory.FromAsync(((System.ServiceModel.ICommunicationObject)(this)).BeginOpen(null, null), new System.Action<System.IAsyncResult>(((System.ServiceModel.ICommunicationObject)(this)).EndOpen));
@@ -757,7 +994,7 @@ namespace ServiceReference1
         {
             if ((endpointConfiguration == EndpointConfiguration.BasicHttpBinding_IAeroCondorController))
             {
-                return new System.ServiceModel.EndpointAddress("http://localhost:8094/ec.edu.monster.controlador/AeroCondorController.svc");
+                return new System.ServiceModel.EndpointAddress("http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc");
             }
             throw new System.InvalidOperationException(string.Format("No se pudo encontrar un punto de conexión con el nombre \"{0}\".", endpointConfiguration));
         }

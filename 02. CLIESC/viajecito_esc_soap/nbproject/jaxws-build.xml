@@ -18,8 +18,8 @@
     </target>
     <target name="wsimport-client-AeroCondorController" depends="wsimport-init">
         <mkdir dir="${build.generated.dir}/jax-wsCache/AeroCondorController"/>
-        <property name="wsdl-AeroCondorController" location="xml-resources/web-service-references/AeroCondorController/wsdl/localhost_55325/ec.edu.monster.controlador/AeroCondorController.svc.wsdl"/>
-        <wsimport sourcedestdir="${build.generated.dir}/jax-wsCache/AeroCondorController" destdir="${build.generated.dir}/jax-wsCache/AeroCondorController" wsdl="${wsdl-AeroCondorController}" catalog="catalog.xml" encoding="${source.encoding}" extension="true" verbose="true" fork="false" wsdlLocation="http://localhost:55325/ec.edu.monster.controlador/AeroCondorController.svc?wsdl" xnocompile="true" xendorsed="true" package="ec.edu.viajecito.client">
+        <property name="wsdl-AeroCondorController" location="xml-resources/web-service-references/AeroCondorController/wsdl/10.40.31.126_8094/ec.edu.monster.controlador/AeroCondorController.svc.wsdl"/>
+        <wsimport sourcedestdir="${build.generated.dir}/jax-wsCache/AeroCondorController" destdir="${build.generated.dir}/jax-wsCache/AeroCondorController" wsdl="${wsdl-AeroCondorController}" catalog="catalog.xml" encoding="${source.encoding}" extension="true" verbose="true" fork="false" wsdlLocation="http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc?wsdl" xnocompile="true" xendorsed="true" package="ec.edu.viajecito.client">
             <depends file="${wsdl-AeroCondorController}"/>
             <produces dir="${build.generated.dir}/jax-wsCache/AeroCondorController"/>
         </wsimport>

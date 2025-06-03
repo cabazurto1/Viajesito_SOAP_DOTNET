@@ -1,7 +1,7 @@
 {
   "ExtendedData": {
     "inputs": [
-      "http://localhost:8094/ec.edu.monster.controlador/AeroCondorController.svc?wsdl"
+      "http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc?wsdl"
     ],
     "collectionTypes": [
       "System.Array",
