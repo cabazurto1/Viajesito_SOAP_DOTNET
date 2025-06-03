@@ -73,3 +73,35 @@ GO
 INSERT INTO usuarios (nombre, username, password, telefono)
 VALUES ('MONSTER', 'MONSTER', 'MONSTER9', '0987654321');
 GO
+-- Agregar campo cedula a la tabla usuarios
+ALTER TABLE usuarios
+ADD cedula VARCHAR(20) NOT NULL DEFAULT '0000000000';
+
+-- Tabla de Facturas
+IF OBJECT_ID('facturas', 'U') IS NULL
+CREATE TABLE facturas (
+    id_factura INT IDENTITY(1,1) PRIMARY KEY,
+    numero_factura VARCHAR(20) NOT NULL UNIQUE,
+    id_usuario INT NOT NULL,
+    precio_sin_iva NUMERIC(10,2) NOT NULL,
+    precio_con_iva NUMERIC(10,2) NOT NULL,
+    fecha_factura DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
+);
+GO
+
+-- Agregar columna id_factura a boletos
+ALTER TABLE boletos
+ADD id_factura INT NULL;
+
+-- Agregar clave foránea de boletos a facturas
+ALTER TABLE boletos
+ADD CONSTRAINT FK_boletos_factura FOREIGN KEY (id_factura) REFERENCES facturas(id_factura);
+
+-- Verificar y agregar campo 'correo' si no existe
+IF COL_LENGTH('usuarios', 'correo') IS NULL
+BEGIN
+    ALTER TABLE usuarios
+    ADD correo VARCHAR(150) NOT NULL DEFAULT 'sincorreo@correo.com';
+END
+GO

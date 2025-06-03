@@ -23,5 +23,8 @@ namespace ec.edu.monster.modelo
 
         [DataMember(Order = 6)]
         public int IdVuelo { get; set; }
+        [DataMember(Order = 7)]
+        public int? IdFactura { get; set; }
+
     }
 }

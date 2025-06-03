@@ -80,12 +80,15 @@ namespace ec.edu.monster.servicio
                         Nombre = dr["nombre"].ToString(),
                         Username = dr["username"].ToString(),
                         Password = dr["password"].ToString(),
-                        Telefono = dr["telefono"].ToString()
+                        Telefono = dr["telefono"].ToString(),
+                        Cedula = dr["cedula"].ToString(),
+                        Correo = dr["correo"].ToString()
                     });
                 }
             }
             return lista;
         }
+
 
         public List<Boletos> GetBoletos()
         {
@@ -124,29 +127,36 @@ namespace ec.edu.monster.servicio
                         Nombre = dr["nombre"].ToString(),
                         Username = dr["username"].ToString(),
                         Password = dr["password"].ToString(),
-                        Telefono = dr["telefono"].ToString()
+                        Telefono = dr["telefono"].ToString(),
+                        Cedula = dr["cedula"].ToString(),
+                        Correo = dr["correo"].ToString()
                     };
                 }
             }
             return null;
         }
 
+
+
         public bool CrearUsuario(Usuarios usuario)
         {
             using (var cn = ConexionBD.ObtenerConexion())
             {
                 var cmd = new SqlCommand(@"
-            INSERT INTO usuarios (nombre, username, password, telefono) 
-            VALUES (@nombre, @username, @password, @telefono)", cn);
+            INSERT INTO usuarios (nombre, username, password, telefono, cedula, correo) 
+            VALUES (@nombre, @username, @password, @telefono, @cedula, @correo)", cn);
 
                 cmd.Parameters.AddWithValue("@nombre", usuario.Nombre);
                 cmd.Parameters.AddWithValue("@username", usuario.Username);
                 cmd.Parameters.AddWithValue("@password", usuario.Password);
                 cmd.Parameters.AddWithValue("@telefono", usuario.Telefono ?? "");
+                cmd.Parameters.AddWithValue("@cedula", usuario.Cedula ?? "");
+                cmd.Parameters.AddWithValue("@correo", usuario.Correo ?? "sincorreo@correo.com");
 
                 return cmd.ExecuteNonQuery() > 0;
             }
         }
+
 
         public bool EditarUsuario(Usuarios usuario)
         {
@@ -221,52 +231,105 @@ namespace ec.edu.monster.servicio
         public bool Comprar(CompraBoletoRequest request)
         {
             using (var cn = ConexionBD.ObtenerConexion())
-            using (var trans = cn.BeginTransaction()) // Añadimos transacción
+            using (var trans = cn.BeginTransaction())
             {
                 try
                 {
-                    for (int i = 0; i < request.Cantidad; i++)
+                    decimal totalSinIVA = 0;
+
+                    // Calcular total sin IVA por todos los vuelos
+                    foreach (var vueloCompra in request.Vuelos)
                     {
-                        var cmd = new SqlCommand(@"
-                    INSERT INTO boletos (numero_boleto, id_vuelo, id_usuario, precio_compra)
-                    VALUES (@num, @vuelo, @usuario, 
-                        (SELECT valor FROM vuelos WHERE id_vuelo = @vuelo))", cn, trans);
+                        var precioCmd = new SqlCommand("SELECT valor FROM vuelos WHERE id_vuelo = @id", cn, trans);
+                        precioCmd.Parameters.AddWithValue("@id", vueloCompra.IdVuelo);
+                        var result = precioCmd.ExecuteScalar();
+                        if (result == null) throw new Exception("Vuelo no encontrado");
 
-                        cmd.Parameters.AddWithValue("@num", Guid.NewGuid().ToString().Substring(0, 10).ToUpper());
-                        cmd.Parameters.AddWithValue("@vuelo", request.IdVuelo);
-                        cmd.Parameters.AddWithValue("@usuario", request.IdUsuario);
+                        decimal precioUnitario = (decimal)result;
+                        totalSinIVA += precioUnitario * vueloCompra.Cantidad;
+                    }
 
-                        if (cmd.ExecuteNonQuery() <= 0)
+                    decimal totalConIVA = totalSinIVA * 1.15m; // 15% IVA
+
+                    // Obtener número de factura
+                    var getLastFacturaCmd = new SqlCommand("SELECT MAX(id_factura) FROM facturas", cn, trans);
+                    var lastFacturaObj = getLastFacturaCmd.ExecuteScalar();
+                    int nextFacturaNum = (lastFacturaObj != DBNull.Value) ? Convert.ToInt32(lastFacturaObj) + 1 : 1;
+                    string numeroFactura = "FAC-" + nextFacturaNum.ToString("D9");
+
+                    // Insertar factura
+                    var facturaCmd = new SqlCommand(@"
+                INSERT INTO facturas (numero_factura, id_usuario, precio_sin_iva, precio_con_iva)
+                VALUES (@numero, @usuario, @siniva, @coniva);
+                SELECT SCOPE_IDENTITY();", cn, trans);
+
+                    facturaCmd.Parameters.AddWithValue("@numero", numeroFactura);
+                    facturaCmd.Parameters.AddWithValue("@usuario", request.IdUsuario);
+                    facturaCmd.Parameters.AddWithValue("@siniva", totalSinIVA);
+                    facturaCmd.Parameters.AddWithValue("@coniva", totalConIVA);
+
+                    int idFactura = Convert.ToInt32(facturaCmd.ExecuteScalar());
+
+                    // Procesar cada vuelo
+                    foreach (var vueloCompra in request.Vuelos)
+                    {
+                        // Obtener precio unitario
+                        decimal precioUnitario;
+                        var precioCmd = new SqlCommand("SELECT valor FROM vuelos WHERE id_vuelo = @id", cn, trans);
+                        precioCmd.Parameters.AddWithValue("@id", vueloCompra.IdVuelo);
+                        var result = precioCmd.ExecuteScalar();
+                        if (result == null) throw new Exception("Vuelo no encontrado");
+                        precioUnitario = (decimal)result;
+
+                        // Insertar boletos
+                        for (int i = 0; i < vueloCompra.Cantidad; i++)
+                        {
+                            var boletoCmd = new SqlCommand(@"
+                        INSERT INTO boletos (numero_boleto, id_vuelo, id_usuario, precio_compra, id_factura)
+                        VALUES (@num, @vuelo, @usuario, @precio, @factura)", cn, trans);
+
+                            boletoCmd.Parameters.AddWithValue("@num", Guid.NewGuid().ToString().Substring(0, 10).ToUpper());
+                            boletoCmd.Parameters.AddWithValue("@vuelo", vueloCompra.IdVuelo);
+                            boletoCmd.Parameters.AddWithValue("@usuario", request.IdUsuario);
+                            boletoCmd.Parameters.AddWithValue("@precio", precioUnitario);
+                            boletoCmd.Parameters.AddWithValue("@factura", idFactura);
+
+                            if (boletoCmd.ExecuteNonQuery() <= 0)
+                            {
+                                trans.Rollback();
+                                return false;
+                            }
+                        }
+
+                        // Actualizar cupos disponibles
+                        var updateCmd = new SqlCommand(@"
+                    UPDATE vuelos 
+                    SET disponibles = disponibles - @cantidad 
+                    WHERE id_vuelo = @vuelo AND disponibles >= @cantidad", cn, trans);
+
+                        updateCmd.Parameters.AddWithValue("@cantidad", vueloCompra.Cantidad);
+                        updateCmd.Parameters.AddWithValue("@vuelo", vueloCompra.IdVuelo);
+
+                        if (updateCmd.ExecuteNonQuery() <= 0)
                         {
                             trans.Rollback();
                             return false;
                         }
                     }
 
-                    var updateCmd = new SqlCommand(@"
-                UPDATE vuelos 
-                SET disponibles = disponibles - @cantidad 
-                WHERE id_vuelo = @vuelo AND disponibles >= @cantidad", cn, trans);
-
-                    updateCmd.Parameters.AddWithValue("@cantidad", request.Cantidad);
-                    updateCmd.Parameters.AddWithValue("@vuelo", request.IdVuelo);
-
-                    if (updateCmd.ExecuteNonQuery() <= 0)
-                    {
-                        trans.Rollback();
-                        return false;
-                    }
-
                     trans.Commit();
                     return true;
                 }
-                catch
+                catch (Exception ex)
                 {
                     trans.Rollback();
+                    Console.WriteLine("Error en compra: " + ex.Message);
                     return false;
                 }
             }
         }
+
+
 
 
         public Usuarios Login(string username, string password)
@@ -285,12 +348,15 @@ namespace ec.edu.monster.servicio
                         Nombre = dr["nombre"].ToString(),
                         Username = dr["username"].ToString(),
                         Password = dr["password"].ToString(),
-                        Telefono = dr["telefono"].ToString()
+                        Telefono = dr["telefono"].ToString(),
+                        Cedula = dr["cedula"].ToString(),
+                        Correo = dr["correo"].ToString()
                     };
                 }
             }
             return null;
         }
+
 
         public Vuelos ObtenerVueloPorId(int id)
         {
@@ -648,6 +714,246 @@ namespace ec.edu.monster.servicio
             }
         }
 
+        // Agregar implementación para Facturas en AeroCondorController
+
+        public List<Facturas> GetFacturas()
+        {
+            var lista = new List<Facturas>();
+            using (var cn = ConexionBD.ObtenerConexion())
+            {
+                var cmd = new SqlCommand("SELECT * FROM facturas", cn);
+                var dr = cmd.ExecuteReader();
+                while (dr.Read())
+                {
+                    lista.Add(new Facturas
+                    {
+                        IdFactura = (int)dr["id_factura"],
+                        NumeroFactura = dr["numero_factura"].ToString(),
+                        IdUsuario = (int)dr["id_usuario"],
+                        PrecioSinIVA = (decimal)dr["precio_sin_iva"],
+                        PrecioConIVA = (decimal)dr["precio_con_iva"],
+                        FechaFactura = (DateTime)dr["fecha_factura"]
+                    });
+                }
+            }
+            return lista;
+        }
+
+        public List<Facturas> GetFacturasPorUsuario(int idUsuario)
+        {
+            var lista = new List<Facturas>();
+            using (var cn = ConexionBD.ObtenerConexion())
+            {
+                var cmd = new SqlCommand("SELECT * FROM facturas WHERE id_usuario = @idUsuario", cn);
+                cmd.Parameters.AddWithValue("@idUsuario", idUsuario);
+                var dr = cmd.ExecuteReader();
+                while (dr.Read())
+                {
+                    lista.Add(new Facturas
+                    {
+                        IdFactura = (int)dr["id_factura"],
+                        NumeroFactura = dr["numero_factura"].ToString(),
+                        IdUsuario = (int)dr["id_usuario"],
+                        PrecioSinIVA = (decimal)dr["precio_sin_iva"],
+                        PrecioConIVA = (decimal)dr["precio_con_iva"],
+                        FechaFactura = (DateTime)dr["fecha_factura"]
+                    });
+                }
+            }
+            return lista;
+        }
+
+
+        public Facturas ObtenerFacturaPorId(int id)
+        {
+            using (var cn = ConexionBD.ObtenerConexion())
+            {
+                Facturas factura = null;
+
+                // 1. Obtener datos de la factura
+                var cmd = new SqlCommand("SELECT * FROM facturas WHERE id_factura = @id", cn);
+                cmd.Parameters.AddWithValue("@id", id);
+                var dr = cmd.ExecuteReader();
+                if (dr.Read())
+                {
+                    factura = new Facturas
+                    {
+                        IdFactura = (int)dr["id_factura"],
+                        NumeroFactura = dr["numero_factura"].ToString(),
+                        IdUsuario = (int)dr["id_usuario"],
+                        PrecioSinIVA = (decimal)dr["precio_sin_iva"],
+                        PrecioConIVA = (decimal)dr["precio_con_iva"],
+                        FechaFactura = (DateTime)dr["fecha_factura"],
+                        BoletosRelacionados = new List<Boletos>()
+                    };
+                }
+                dr.Close(); // Necesario para ejecutar otro SqlCommand en la misma conexión
+
+                if (factura != null)
+                {
+                    // 2. Obtener boletos relacionados
+                    var boletosCmd = new SqlCommand("SELECT * FROM boletos WHERE id_factura = @id", cn);
+                    boletosCmd.Parameters.AddWithValue("@id", id);
+                    var drBoletos = boletosCmd.ExecuteReader();
+                    while (drBoletos.Read())
+                    {
+                        factura.BoletosRelacionados.Add(new Boletos
+                        {
+                            IdBoleto = (int)drBoletos["id_boleto"],
+                            NumeroBoleto = drBoletos["numero_boleto"].ToString(),
+                            FechaCompra = (DateTime)drBoletos["fecha_compra"],
+                            PrecioCompra = (decimal)drBoletos["precio_compra"],
+                            IdUsuario = (int)drBoletos["id_usuario"],
+                            IdVuelo = (int)drBoletos["id_vuelo"],
+                            IdFactura = (int)drBoletos["id_factura"]
+                        });
+                    }
+                    drBoletos.Close();
+                }
+
+                return factura;
+            }
+        }
+
+
+        public bool CrearFactura(Facturas factura)
+        {
+            using (var cn = ConexionBD.ObtenerConexion())
+            {
+                var cmd = new SqlCommand(@"INSERT INTO facturas (numero_factura, id_usuario, precio_sin_iva, precio_con_iva) 
+                                    VALUES (@num, @usuario, @siniva, @coniva)", cn);
+                cmd.Parameters.AddWithValue("@num", factura.NumeroFactura);
+                cmd.Parameters.AddWithValue("@usuario", factura.IdUsuario);
+                cmd.Parameters.AddWithValue("@siniva", factura.PrecioSinIVA);
+                cmd.Parameters.AddWithValue("@coniva", factura.PrecioConIVA);
+
+                return cmd.ExecuteNonQuery() > 0;
+            }
+        }
+
+        public bool EditarFactura(Facturas factura)
+        {
+            using (var cn = ConexionBD.ObtenerConexion())
+            {
+                var cmd = new SqlCommand(@"UPDATE facturas SET 
+                                    numero_factura = @num, id_usuario = @usuario, 
+                                    precio_sin_iva = @siniva, precio_con_iva = @coniva 
+                                  WHERE id_factura = @id", cn);
+                cmd.Parameters.AddWithValue("@num", factura.NumeroFactura);
+                cmd.Parameters.AddWithValue("@usuario", factura.IdUsuario);
+                cmd.Parameters.AddWithValue("@siniva", factura.PrecioSinIVA);
+                cmd.Parameters.AddWithValue("@coniva", factura.PrecioConIVA);
+                cmd.Parameters.AddWithValue("@id", factura.IdFactura);
+
+                return cmd.ExecuteNonQuery() > 0;
+            }
+        }
+
+        public bool EliminarFactura(int id)
+        {
+            using (var cn = ConexionBD.ObtenerConexion())
+            {
+                var cmd = new SqlCommand("DELETE FROM facturas WHERE id_factura = @id", cn);
+                cmd.Parameters.AddWithValue("@id", id);
+                return cmd.ExecuteNonQuery() > 0;
+            }
+        }
+
+        public int ContarFacturas()
+        {
+            using (var cn = ConexionBD.ObtenerConexion())
+            {
+                var cmd = new SqlCommand("SELECT COUNT(*) FROM facturas", cn);
+                return (int)cmd.ExecuteScalar();
+            }
+        }
+
+        public List<Facturas> ListarFacturasPorRango(int desde, int hasta)
+        {
+            var lista = new List<Facturas>();
+            using (var cn = ConexionBD.ObtenerConexion())
+            {
+                var cmd = new SqlCommand(@"
+            SELECT * FROM (
+                SELECT *, ROW_NUMBER() OVER (ORDER BY id_factura) AS fila
+                FROM facturas
+            ) AS sub
+            WHERE fila BETWEEN @desde AND @hasta", cn);
+
+                cmd.Parameters.AddWithValue("@desde", desde);
+                cmd.Parameters.AddWithValue("@hasta", hasta);
+
+                var dr = cmd.ExecuteReader();
+                while (dr.Read())
+                {
+                    lista.Add(new Facturas
+                    {
+                        IdFactura = (int)dr["id_factura"],
+                        NumeroFactura = dr["numero_factura"].ToString(),
+                        IdUsuario = (int)dr["id_usuario"],
+                        PrecioSinIVA = (decimal)dr["precio_sin_iva"],
+                        PrecioConIVA = (decimal)dr["precio_con_iva"],
+                        FechaFactura = (DateTime)dr["fecha_factura"]
+                    });
+                }
+            }
+            return lista;
+        }
+
+        public List<Boletos> ObtenerBoletosDeFactura(int idFactura)
+        {
+            var lista = new List<Boletos>();
+            using (var cn = ConexionBD.ObtenerConexion())
+            {
+                var cmd = new SqlCommand("SELECT * FROM boletos WHERE id_factura = @id", cn);
+                cmd.Parameters.AddWithValue("@id", idFactura);
+                var dr = cmd.ExecuteReader();
+                while (dr.Read())
+                {
+                    lista.Add(new Boletos
+                    {
+                        IdBoleto = (int)dr["id_boleto"],
+                        NumeroBoleto = dr["numero_boleto"].ToString(),
+                        FechaCompra = (DateTime)dr["fecha_compra"],
+                        PrecioCompra = (decimal)dr["precio_compra"],
+                        IdUsuario = (int)dr["id_usuario"],
+                        IdVuelo = (int)dr["id_vuelo"],
+                        IdFactura = dr["id_factura"] == DBNull.Value ? null : (int?)dr["id_factura"]
+                    });
+                }
+            }
+            return lista;
+        }
+
+        public bool AsociarBoletosAFactura(int idFactura, List<int> idsBoletos)
+        {
+            using (var cn = ConexionBD.ObtenerConexion())
+            using (var trans = cn.BeginTransaction())
+            {
+                try
+                {
+                    foreach (int idBoleto in idsBoletos)
+                    {
+                        var cmd = new SqlCommand("UPDATE boletos SET id_factura = @idFactura WHERE id_boleto = @idBoleto", cn, trans);
+                        cmd.Parameters.AddWithValue("@idFactura", idFactura);
+                        cmd.Parameters.AddWithValue("@idBoleto", idBoleto);
+
+                        if (cmd.ExecuteNonQuery() <= 0)
+                        {
+                            trans.Rollback();
+                            return false;
+                        }
+                    }
+                    trans.Commit();
+                    return true;
+                }
+                catch
+                {
+                    trans.Rollback();
+                    return false;
+                }
+            }
+        }
 
 
         public List<Vuelos> BuscarVuelos(string origen, string destino, DateTime fechaSalida)

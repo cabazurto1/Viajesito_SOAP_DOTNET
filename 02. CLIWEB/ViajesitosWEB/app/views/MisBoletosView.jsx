@@ -8,7 +8,8 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  ScrollView
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { obtenerBoletosPorUsuario } from '../controllers/BoletoController';
@@ -73,35 +74,63 @@ export default function MisBoletosView() {
   };
 
   const renderItem = ({ item, index }) => {
-    if (!item || !item.numeroBoleto) return null;
-    return (
-      <View style={[styles.card, { opacity: loading ? 0.5 : 1 }]}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>🎫 Boleto #{item.numeroBoleto}</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>#{index + 1}</Text>
+      if (!item || !item.numeroBoleto) return null;
+      return (
+        <View style={[styles.card, { opacity: loading ? 0.5 : 1 }]}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>🎫 Boleto #{item.numeroBoleto}</Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>#{index + 1}</Text>
+            </View>
+          </View>
+
+          <View style={styles.cardContent}>
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>✈️ ID Vuelo:</Text>
+              <Text style={styles.value}>{item.idVuelo}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>📅 Fecha de Compra:</Text>
+              <Text style={styles.value}>{formatDate(item.fechaCompra)}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>💰 Precio:</Text>
+              <Text style={styles.priceValue}>${item.precio}</Text>
+            </View>
           </View>
         </View>
+      );
+    };
 
-        <View style={styles.cardContent}>
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>✈️ ID Vuelo:</Text>
-            <Text style={styles.value}>{item.idVuelo}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>📅 Fecha de Compra:</Text>
-            <Text style={styles.value}>{formatDate(item.fechaCompra)}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>💰 Precio:</Text>
-            <Text style={styles.priceValue}>${item.precio}</Text>
+  const renderTable = () => (
+    <ScrollView
+      horizontal
+      contentContainerStyle={{ justifyContent: 'center', alignItems: 'center', width: '100%' }}
+      style={{ flex: 1 }}
+    >
+      <ScrollView style={{ maxHeight: 500 }}>
+        <View style={styles.tableWrapper}>
+          <View style={styles.table}>
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              <Text style={styles.tableHeaderCell}>#</Text>
+              <Text style={styles.tableHeaderCell}>ID Vuelo</Text>
+              <Text style={styles.tableHeaderCell}>Fecha de Compra</Text>
+              <Text style={styles.tableHeaderCell}>Precio</Text>
+            </View>
+            {boletos.map((item, index) => (
+              <View key={item.numeroBoleto || index} style={styles.tableRow}>
+                <Text style={styles.tableCell}>{index + 1}</Text>
+                <Text style={styles.tableCell}>{item.idVuelo}</Text>
+                <Text style={styles.tableCell}>{formatDate(item.fechaCompra)}</Text>
+                <Text style={styles.tableCell}>${item.precio}</Text>
+              </View>
+            ))}
           </View>
         </View>
-      </View>
-    );
-  };
+      </ScrollView>
+    </ScrollView>
+  );
+
 
   const handleVolverMenu = async () => {
     let idUsuarioActual = idParam;
@@ -122,7 +151,6 @@ export default function MisBoletosView() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-
       <View style={styles.container}>
         <View style={styles.headerContainer}>
           <Text style={styles.header}>🎫 Mis Boletos</Text>
@@ -147,16 +175,20 @@ export default function MisBoletosView() {
               </Text>
             </View>
           ) : (
-            <FlatList
-              data={boletos}
-              keyExtractor={(item, index) =>
-                item && item.numeroBoleto ? String(item.numeroBoleto) : `boleto-${index}`
-              }
-              renderItem={renderItem}
-              showsVerticalScrollIndicator={true}
-              contentContainerStyle={styles.listContainer}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-            />
+            isMobile ? (
+              <FlatList
+                data={boletos}
+                keyExtractor={(item, index) =>
+                  item && item.numeroBoleto ? String(item.numeroBoleto) : `boleto-${index}`
+                }
+                renderItem={renderItem}
+                showsVerticalScrollIndicator={true}
+                contentContainerStyle={styles.listContainer}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+              />
+            ) : (
+              renderTable()
+            )
           )}
         </View>
 
@@ -321,17 +353,68 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'right',
   },
+  tableWrapper: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 12,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    marginVertical: 20,
+    width: 700,
+    marginLeft: 'auto',
+    marginRight: 'auto', 
+  },
+  table: {
+    minWidth: 700,
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#dee2e6',
+  },
+  tableHeader: {
+    backgroundColor: '#35798e',
+  },
+  tableHeaderCell: {
+    flex: 1,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    padding: 10,
+    fontSize: 16,
+  },
+  tableCell: {
+    flex: 1,
+    textAlign: 'center',
+    color: '#212529',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    fontSize: 15,
+  },
+  volverBtn: {
+    backgroundColor: '#4e88a9',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    alignSelf: 'center',
+    maxWidth: 220,
+  },
   buttonContainer: {
     backgroundColor: '#fff',
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#e9ecef',
-  },
-  volverBtn: {
-    backgroundColor: '#4e88a9',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
   },
   volverText: {
     color: '#fff',

@@ -24,5 +24,9 @@ namespace ec.edu.monster.modelo
 
         [DataMember(Order = 5)]
         public string Telefono { get; set; }
+        [DataMember(Order = 6)]
+        public string Cedula { get; set; }
+        [DataMember(Order = 7)]
+        public string Correo { get; set; }  // Nuevo campo agregado
     }
 }

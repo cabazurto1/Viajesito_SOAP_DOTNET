@@ -110,5 +110,36 @@ namespace ec.edu.monster.controlador
 
         [OperationContract]
         Usuarios Login(string username, string password);
+
+        // ==== FACTURAS ====
+        [OperationContract]
+        List<Facturas> GetFacturas();
+
+        [OperationContract]
+        Facturas ObtenerFacturaPorId(int id);
+
+        [OperationContract]
+        bool CrearFactura(Facturas factura);
+
+        [OperationContract]
+        bool EditarFactura(Facturas factura);
+
+        [OperationContract]
+        bool EliminarFactura(int id);
+
+        [OperationContract]
+        int ContarFacturas();
+
+        [OperationContract]
+        List<Facturas> ListarFacturasPorRango(int desde, int hasta);
+
+        [OperationContract]
+        List<Boletos> ObtenerBoletosDeFactura(int idFactura);
+
+        [OperationContract]
+        bool AsociarBoletosAFactura(int idFactura, List<int> idsBoletos);
+        [OperationContract]
+        List<Facturas> GetFacturasPorUsuario(int idUsuario);
+
     }
 }

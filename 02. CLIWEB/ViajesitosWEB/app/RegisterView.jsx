@@ -14,12 +14,19 @@ import {
 import { useRouter } from 'expo-router';
 import { crearUsuario } from './controllers/UsuarioController';
 
+function validarCorreo(correo) {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(correo);
+}
+
 export default function RegisterView() {
   const router = useRouter();
   const [nombre, setNombre] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [telefono, setTelefono] = useState('');
+  const [cedula, setCedula] = useState('');
+  const [correo, setCorreo] = useState('');
   const [secure, setSecure] = useState(true);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -27,8 +34,22 @@ export default function RegisterView() {
   const [esExito, setEsExito] = useState(false);
 
   const handleRegister = async () => {
-    if (!nombre.trim() || !username.trim() || !password.trim() || !telefono.trim()) {
+    if (!nombre.trim() || !username.trim() || !password.trim() || !telefono.trim() || !cedula.trim() || !correo.trim()) {
       setMensaje('⚠️ Todos los campos son obligatorios');
+      setEsExito(false);
+      setModalVisible(true);
+      return;
+    }
+
+    if (!/^[0-9]{10}$/.test(telefono.trim())) {
+      setMensaje('⚠️ El teléfono debe tener 10 dígitos');
+      setEsExito(false);
+      setModalVisible(true);
+      return;
+    }
+
+    if (!validarCorreo(correo.trim())) {
+      setMensaje('⚠️ Formato de correo no válido');
       setEsExito(false);
       setModalVisible(true);
       return;
@@ -41,7 +62,9 @@ export default function RegisterView() {
         Nombre: nombre.trim(),
         Username: username.trim(),
         Password: password.trim(),
-        Telefono: telefono.trim()
+        Telefono: telefono.trim(),
+        Cedula: cedula.trim(),
+        Correo: correo.trim()
       });
 
       if (success === true) {
@@ -112,11 +135,38 @@ export default function RegisterView() {
       <View style={styles.inputWrapper}>
         <TextInput
           style={styles.input}
-          placeholder="Teléfono"
+          placeholder="Teléfono (10 dígitos)"
           keyboardType="phone-pad"
           value={telefono}
-          onChangeText={setTelefono}
+          onChangeText={(text) => {
+            if (text.length <= 10 && /^[0-9]*$/.test(text)) setTelefono(text);
+          }}
           placeholderTextColor="#888"
+        />
+      </View>
+
+      <View style={styles.inputWrapper}>
+        <TextInput
+          style={styles.input}
+          placeholder="Cédula"
+          keyboardType="number-pad"
+          value={cedula}
+          onChangeText={(text) => {
+            if (text.length <= 10 && /^[0-9]*$/.test(text)) setCedula(text);
+          }}
+          placeholderTextColor="#888"
+        />
+      </View>
+
+      <View style={styles.inputWrapper}>
+        <TextInput
+          style={styles.input}
+          placeholder="Correo electrónico"
+          keyboardType="email-address"
+          value={correo}
+          onChangeText={setCorreo}
+          placeholderTextColor="#888"
+          autoCapitalize="none"
         />
       </View>
 
@@ -135,7 +185,6 @@ export default function RegisterView() {
         </Text>
       </TouchableOpacity>
 
-      {/* MODAL DE MENSAJE */}
       <Modal
         visible={modalVisible}
         transparent
@@ -144,13 +193,8 @@ export default function RegisterView() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={[styles.modalMessage, { color: esExito ? 'green' : 'red' }]}>
-              {mensaje}
-            </Text>
-            <TouchableOpacity
-              onPress={volverAlLogin}
-              style={styles.modalButton}
-            >
+            <Text style={[styles.modalMessage, { color: esExito ? 'green' : 'red' }]}> {mensaje} </Text>
+            <TouchableOpacity onPress={volverAlLogin} style={styles.modalButton}>
               <Text style={{ color: '#fff', fontWeight: 'bold' }}>Aceptar</Text>
             </TouchableOpacity>
           </View>
