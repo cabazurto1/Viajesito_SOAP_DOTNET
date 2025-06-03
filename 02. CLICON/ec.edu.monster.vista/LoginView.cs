@@ -14,7 +14,7 @@ namespace ec.edu.monster.vista
         {
             while (true)
             {
-                Console.WriteLine("===== BIENVENIDO MONSTER VIAJECITOS SA =====");
+                Console.WriteLine("===== BIENVENIDO MONSTER VIAJECITOS =====");
                 Console.WriteLine("1. Iniciar Sesión");
                 Console.WriteLine("2. Registrarse");
                 Console.WriteLine("3. Salir");
@@ -77,16 +77,23 @@ namespace ec.edu.monster.vista
             nuevo.Password = Console.ReadLine()?.Trim();
             Console.Write("Teléfono: ");
             nuevo.Telefono = Console.ReadLine()?.Trim();
+            Console.Write("Cédula: ");
+            nuevo.Cedula = Console.ReadLine()?.Trim();
+            Console.Write("Correo: ");
+            nuevo.Correo = Console.ReadLine()?.Trim();
 
-            // Validaciones
+            // Validaciones obligatorias
             if (string.IsNullOrWhiteSpace(nuevo.Nombre) ||
                 string.IsNullOrWhiteSpace(nuevo.Username) ||
-                string.IsNullOrWhiteSpace(nuevo.Password))
+                string.IsNullOrWhiteSpace(nuevo.Password) ||
+                string.IsNullOrWhiteSpace(nuevo.Cedula) ||
+                string.IsNullOrWhiteSpace(nuevo.Correo))
             {
-                Console.WriteLine("Nombre, username y contraseña son obligatorios.\n");
+                Console.WriteLine("Nombre, username, contraseña, cédula y correo son obligatorios.\n");
                 return;
             }
 
+            // Validación de teléfono
             if (!string.IsNullOrWhiteSpace(nuevo.Telefono))
             {
                 if (!nuevo.Telefono.All(char.IsDigit))
@@ -102,9 +109,24 @@ namespace ec.edu.monster.vista
                 }
             }
 
+            // Validación de cédula (solo números, longitud típica entre 8 y 10)
+            if (!nuevo.Cedula.All(char.IsDigit) || nuevo.Cedula.Length < 8 || nuevo.Cedula.Length > 10)
+            {
+                Console.WriteLine("La cédula debe contener solo números y tener entre 8 y 10 dígitos.\n");
+                return;
+            }
+
+            // Validación de correo electrónico básica
+            if (!System.Text.RegularExpressions.Regex.IsMatch(nuevo.Correo!, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                Console.WriteLine("El correo electrónico no tiene un formato válido.\n");
+                return;
+            }
+
             bool exito = await controller.CrearUsuarioAsync(nuevo);
 
             Console.WriteLine(exito ? "Usuario registrado exitosamente.\n" : "Error al registrar usuario. Puede que el username ya exista.\n");
         }
+
     }
 }

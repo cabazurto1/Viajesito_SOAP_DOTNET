@@ -4,4 +4,13 @@
     <system systemId="http://localhost:55325/ec.edu.monster.controlador/AeroCondorController.svc?xsd=xsd0" uri="wsdl/localhost_55325/ec.edu.monster.controlador/AeroCondorController.svc.xsd_xsd0.xsd"/>
     <system systemId="http://localhost:55325/ec.edu.monster.controlador/AeroCondorController.svc?xsd=xsd1" uri="wsdl/localhost_55325/ec.edu.monster.controlador/AeroCondorController.svc.xsd_xsd1.xsd"/>
     <system systemId="http://localhost:55325/ec.edu.monster.controlador/AeroCondorController.svc?xsd=xsd2" uri="wsdl/localhost_55325/ec.edu.monster.controlador/AeroCondorController.svc.xsd_xsd2.xsd"/>
+    <system systemId="http://192.168.137.117:8094/ec.edu.monster.controlador/AeroCondorController.svc?wsdl" uri="wsdl/192.168.137.117_8094/ec.edu.monster.controlador/AeroCondorController.svc.wsdl"/>
+    <system systemId="http://192.168.137.117:8094/ec.edu.monster.controlador/AeroCondorController.svc?xsd=xsd0" uri="wsdl/192.168.137.117_8094/ec.edu.monster.controlador/AeroCondorController.svc.xsd_xsd0.xsd"/>
+    <system systemId="http://192.168.137.117:8094/ec.edu.monster.controlador/AeroCondorController.svc?xsd=xsd1" uri="wsdl/192.168.137.117_8094/ec.edu.monster.controlador/AeroCondorController.svc.xsd_xsd1.xsd"/>
+    <system systemId="http://192.168.137.117:8094/ec.edu.monster.controlador/AeroCondorController.svc?xsd=xsd2" uri="wsdl/192.168.137.117_8094/ec.edu.monster.controlador/AeroCondorController.svc.xsd_xsd2.xsd"/>
+    <system systemId="http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc?wsdl" uri="wsdl/10.40.31.126_8094/ec.edu.monster.controlador/AeroCondorController.svc.wsdl"/>
+    <system systemId="http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc?xsd=xsd0" uri="wsdl/10.40.31.126_8094/ec.edu.monster.controlador/AeroCondorController.svc.xsd_xsd0.xsd"/>
+    <system systemId="http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc?xsd=xsd1" uri="wsdl/10.40.31.126_8094/ec.edu.monster.controlador/AeroCondorController.svc.xsd_xsd1.xsd"/>
+    <system systemId="http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc?xsd=xsd2" uri="wsdl/10.40.31.126_8094/ec.edu.monster.controlador/AeroCondorController.svc.xsd_xsd2.xsd"/>
+    <system systemId="http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc?xsd=xsd3" uri="wsdl/10.40.31.126_8094/ec.edu.monster.controlador/AeroCondorController.svc.xsd_xsd3.xsd"/>
 </catalog>

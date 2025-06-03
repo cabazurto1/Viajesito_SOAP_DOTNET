@@ -9,6 +9,8 @@ package ec.edu.viajecito.client;
  * @author Drouet
  */
 public class AeroCondorClient {
+    
+    
 
     public static ArrayOfBoletos obtenerBoletosPorUsuario(java.lang.Integer idUsuario) {
         ec.edu.viajecito.client.AeroCondorController service = new ec.edu.viajecito.client.AeroCondorController();
@@ -69,7 +71,17 @@ public class AeroCondorClient {
         ec.edu.viajecito.client.IAeroCondorController port = service.getBasicHttpBindingIAeroCondorController();
         return port.obtenerVueloPorId(id);
     }
-    
-    
+
+    public static Facturas obtenerFacturaPorId(java.lang.Integer id) {
+        ec.edu.viajecito.client.AeroCondorController service = new ec.edu.viajecito.client.AeroCondorController();
+        ec.edu.viajecito.client.IAeroCondorController port = service.getBasicHttpBindingIAeroCondorController();
+        return port.obtenerFacturaPorId(id);
+    }
+
+    public static ArrayOfFacturas getFacturasPorUsuario(java.lang.Integer idUsuario) {
+        ec.edu.viajecito.client.AeroCondorController service = new ec.edu.viajecito.client.AeroCondorController();
+        ec.edu.viajecito.client.IAeroCondorController port = service.getBasicHttpBindingIAeroCondorController();
+        return port.getFacturasPorUsuario(idUsuario);
+    }        
     
 }

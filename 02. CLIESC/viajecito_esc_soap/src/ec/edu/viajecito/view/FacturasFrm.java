@@ -4,8 +4,11 @@
  */
 package ec.edu.viajecito.view;
 
-import ec.edu.viajecito.controller.VuelosController;
-import ec.edu.viajecito.model.Vuelo;
+import ec.edu.viajecito.controller.BoletosController;
+import ec.edu.viajecito.controller.FacturasController;
+import ec.edu.viajecito.model.Boleto;
+import ec.edu.viajecito.model.Factura;
+import ec.edu.viajecito.model.Usuario;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
@@ -13,6 +16,7 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -23,33 +27,68 @@ import javax.swing.table.JTableHeader;
  *
  * @author Drouet
  */
-public class ViajesFrm extends javax.swing.JFrame {
+public class FacturasFrm extends javax.swing.JFrame {
+    
+    private Usuario usuario;
+    private List<Factura> facturas;
 
     /**
      * Creates new form LoginFrm
      */
-    public ViajesFrm() {
+    public FacturasFrm(Usuario usuario) {
         initComponents();
-        
         tableStyle();
-        cargarTablaVuelos();
+        this.usuario = usuario;
+        cargarTablaFactura();
     }
+    
+    private void cargarTablaFactura() { 
+        FacturasController facturasController = new FacturasController();
+        facturas = facturasController.obtenerFacturasPorUsuario(usuario.getIdUsuario());
+
+        // Definir columnas
+        String[] columnas = {"N. Factura", "Fecha", "Precio"};
+        DefaultTableModel modelo = new DefaultTableModel(columnas, 0);
+
+        // Formateador de fecha
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+
+        // Agregar filas al modelo
+        for (Factura factura : facturas) {
+            String numero = factura.getNumeroFactura();
+            String fecha = factura.getFechaFactura() != null ? sdf.format(factura.getFechaFactura()) : "Sin fecha";
+            String precio = String.format("$ %.2f", factura.getPrecioConIVA());
+
+            Object[] fila = {numero, fecha, precio};
+            modelo.addRow(fila);
+        }
+
+        // Asignar modelo a la tabla
+        tblFactura.setModel(modelo);
+
+        // Opcional: ajustar tamaño de columnas si lo deseas
+        tblFactura.getColumnModel().getColumn(0).setPreferredWidth(150); // N. Factura
+        tblFactura.getColumnModel().getColumn(1).setPreferredWidth(100); // Fecha
+        tblFactura.getColumnModel().getColumn(2).setPreferredWidth(80);  // Precio
+    }
+
+
 
     private void tableStyle() {
         // Cambiar fuente
-        tblViajes.setFont(new Font("Maiandra GD", Font.PLAIN, 14));
+        tblFactura.setFont(new Font("Maiandra GD", Font.PLAIN, 14));
 
         // Cambiar alto de las filas
-        tblViajes.setRowHeight(25);
+        tblFactura.setRowHeight(25);
 
         // Cambiar color de fondo y texto de las filas
-        tblViajes.setBackground(Color.WHITE);
-        tblViajes.setForeground(Color.BLACK);
+        tblFactura.setBackground(Color.WHITE);
+        tblFactura.setForeground(Color.BLACK);
         
-        tblViajes.setFillsViewportHeight(true);
+        tblFactura.setFillsViewportHeight(true);
 
         // Cambiar colores de encabezado
-        JTableHeader header = tblViajes.getTableHeader();        
+        JTableHeader header = tblFactura.getTableHeader();        
         header.setDefaultRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
@@ -58,7 +97,7 @@ public class ViajesFrm extends javax.swing.JFrame {
                 label.setOpaque(true);
                 label.setFont(new Font("Maiandra GD", Font.BOLD, 14));
                 label.setBackground(new Color(60,59,46));
-                label.setForeground(Color.WHITE);                
+                label.setForeground(Color.WHITE);  
                 label.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230)));
                 label.setHorizontalAlignment(SwingConstants.CENTER);
                 return label;
@@ -66,11 +105,11 @@ public class ViajesFrm extends javax.swing.JFrame {
         });      
 
         // Bordes
-        tblViajes.setShowHorizontalLines(true);
-        tblViajes.setShowVerticalLines(true);
-        tblViajes.setGridColor(new Color(230, 230, 230)); // Líneas suaves
+        tblFactura.setShowHorizontalLines(true);
+        tblFactura.setShowVerticalLines(true);
+        tblFactura.setGridColor(new Color(230, 230, 230)); // Líneas suaves
         
-        tblViajes.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+        tblFactura.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
                     boolean isSelected, boolean hasFocus, int row, int column) {
@@ -89,32 +128,6 @@ public class ViajesFrm extends javax.swing.JFrame {
             }
         });
     }
-    
-    private void cargarTablaVuelos() {
-        // Definir columnas
-        String[] columnas = {"Código", "Origen", "Destino", "Hora Salida", "Precio", "Disponibles"};
-        DefaultTableModel modelo = new DefaultTableModel(null, columnas);
-
-        // Obtener los vuelos desde el controlador o directamente
-        List<Vuelo> vuelos = new VuelosController().obtenerTodosVuelos();
-
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm"); // Formato de fecha visible
-
-        for (Vuelo v : vuelos) {
-            Object[] fila = new Object[]{
-                v.getCodigoVuelo(),
-                v.getCiudadOrigen().getNombreCiudad(),
-                v.getCiudadDestino().getNombreCiudad(),
-                sdf.format(v.getHoraSalida()),
-                v.getValor(),
-                v.getDisponibles()
-            };
-            modelo.addRow(fila);
-        }
-
-        tblViajes.setModel(modelo);
-    }
-
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -130,7 +143,7 @@ public class ViajesFrm extends javax.swing.JFrame {
         btnSalir = new javax.swing.JButton();
         jLabel5 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
-        tblViajes = new javax.swing.JTable();
+        tblFactura = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
@@ -140,7 +153,7 @@ public class ViajesFrm extends javax.swing.JFrame {
         jLabel3.setBackground(new java.awt.Color(27, 27, 30));
         jLabel3.setFont(new java.awt.Font("Maiandra GD", 1, 36)); // NOI18N
         jLabel3.setForeground(new java.awt.Color(60, 59, 46));
-        jLabel3.setText("Vuelos");
+        jLabel3.setText("Mis Boletos");
 
         btnSalir.setBackground(new java.awt.Color(35, 103, 138));
         btnSalir.setFont(new java.awt.Font("Maiandra GD", 1, 24)); // NOI18N
@@ -159,23 +172,23 @@ public class ViajesFrm extends javax.swing.JFrame {
         jLabel5.setForeground(new java.awt.Color(60, 59, 46));
         jLabel5.setText("VIAJECITO S.A.");
 
-        tblViajes.setBackground(new java.awt.Color(255, 255, 255));
-        tblViajes.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
-        tblViajes.setFont(new java.awt.Font("Maiandra GD", 0, 18)); // NOI18N
-        tblViajes.setForeground(new java.awt.Color(0, 0, 0));
-        tblViajes.setModel(new javax.swing.table.DefaultTableModel(
+        tblFactura.setBackground(new java.awt.Color(255, 255, 255));
+        tblFactura.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
+        tblFactura.setFont(new java.awt.Font("Maiandra GD", 0, 18)); // NOI18N
+        tblFactura.setForeground(new java.awt.Color(0, 0, 0));
+        tblFactura.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
 
             },
             new String [] {
-                "Cod.", "Origen", "Destino", "Hora Salida", "Precio", "Disponibles"
+                "N. Factura", "Fecha", "Precio"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
+                java.lang.String.class, java.lang.String.class, java.lang.String.class
             };
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false
+                false, false, false
             };
 
             public Class getColumnClass(int columnIndex) {
@@ -186,8 +199,13 @@ public class ViajesFrm extends javax.swing.JFrame {
                 return canEdit [columnIndex];
             }
         });
-        tblViajes.setGridColor(new java.awt.Color(0, 0, 0));
-        jScrollPane1.setViewportView(tblViajes);
+        tblFactura.setGridColor(new java.awt.Color(0, 0, 0));
+        tblFactura.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                tblFacturaMouseClicked(evt);
+            }
+        });
+        jScrollPane1.setViewportView(tblFactura);
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -241,6 +259,18 @@ public class ViajesFrm extends javax.swing.JFrame {
         this.dispose();
     }//GEN-LAST:event_btnSalirActionPerformed
 
+    private void tblFacturaMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tblFacturaMouseClicked
+        
+        try {
+            int fila = tblFactura.rowAtPoint(evt.getPoint());
+            Factura factura = facturas.get(fila);
+            System.out.println(factura.getNumeroFactura());
+            new FacturaDetalleFrm(usuario, factura.getIdFactura()).setVisible(true);
+        } catch (Exception e) {
+        }
+        
+    }//GEN-LAST:event_tblFacturaMouseClicked
+
     /**
      * @param args the command line arguments
      */
@@ -258,13 +288,13 @@ public class ViajesFrm extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(ViajesFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(FacturasFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(ViajesFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(FacturasFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(ViajesFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(FacturasFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(ViajesFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(FacturasFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
         //</editor-fold>
@@ -278,7 +308,7 @@ public class ViajesFrm extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new ViajesFrm().setVisible(true);
+                new FacturasFrm(new Usuario(1)).setVisible(true);
             }
         });
     }
@@ -289,6 +319,6 @@ public class ViajesFrm extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel5;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable tblViajes;
+    private javax.swing.JTable tblFactura;
     // End of variables declaration//GEN-END:variables
 }

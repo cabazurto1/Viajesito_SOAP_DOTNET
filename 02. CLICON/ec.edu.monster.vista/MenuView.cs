@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using ServiceReference1;
 using ec.edu.monster.controlador;
+using _02._CLICON.ec.edu.monster.controlador;
 
 namespace ec.edu.monster.vista
 {
@@ -12,6 +13,9 @@ namespace ec.edu.monster.vista
     {
         private static readonly VueloController vuelosController = new VueloController();
         private static readonly BoletoController boletosController = new BoletoController();
+        private static readonly FacturaController facturaController = new FacturaController();
+
+
 
 
         public static async Task MostrarAsync(Usuarios usuario)
@@ -22,7 +26,8 @@ namespace ec.edu.monster.vista
                 Console.WriteLine("1. Ver mis boletos");
                 Console.WriteLine("2. Ver todos los vuelos");
                 Console.WriteLine("3. Comprar boletos");
-                Console.WriteLine("4. Cerrar sesión");
+                Console.WriteLine("4. Ver mis facturas");
+                Console.WriteLine("5. Cerrar sesión");                
                 Console.Write("Seleccione una opción: ");
 
                 var opcion = Console.ReadLine();
@@ -38,15 +43,122 @@ namespace ec.edu.monster.vista
                     case "3":
                         await ComprarBoletosView.ComprarAsync(usuario);
                         break;
-                    case "4":
+                    case "5":
                         Console.WriteLine("Sesión cerrada.");
                         return;
+                    case "4":
+                        await VerFacturasAsync(usuario);
+                        break;
                     default:
                         Console.WriteLine("Opción inválida.\n");
                         break;
                 }
             }
         }
+
+        private static async Task MostrarDetalleFacturaAsync(Facturas factura, Usuarios usuario)
+        {
+            Console.WriteLine($"\nFactura: {factura.NumeroFactura}");
+            Console.WriteLine("Vendedor: Viajecitos S.A.\t\tRUC:1710708973001");
+
+            Console.WriteLine("\nDatos del usuario");
+            Console.WriteLine($"Nombre Cliente: {usuario.Nombre}");
+            Console.WriteLine($"Cédula: {usuario.Cedula}");
+            Console.WriteLine($"Teléfono: {usuario.Telefono}");
+            Console.WriteLine($"Correo: {usuario.Correo}");
+
+            Console.WriteLine("\nDetalle de la factura");
+            Console.WriteLine("{0,-15} {1,-35} {2,-10} {3,-15}",
+                "numBoleto", "Detalle", "cantidad", "precioUnitario");
+
+            decimal subtotal = 0;
+
+            foreach (var boleto in factura.BoletosRelacionados)
+            {
+                // Suponiendo que tienes acceso a los datos del vuelo:
+                Vuelos vuelo = await vuelosController.ObtenerPorIdAsync(boleto.IdVuelo);
+
+                string ciudadOrigen = ObtenerNombreCiudad(vuelo.IdCiudadOrigen);
+                string ciudadDestino = ObtenerNombreCiudad(vuelo.IdCiudadDestino);
+                string fecha = vuelo.HoraSalida.ToString("yyyy-MM-dd HH:mm");
+
+                string detalle = $"{ciudadOrigen} - {ciudadDestino} - {fecha}";
+                subtotal += boleto.PrecioCompra;
+
+                Console.WriteLine("{0,-15} {1,-35} {2,-10} ${3,-13}",
+                    boleto.NumeroBoleto, detalle, 1, boleto.PrecioCompra.ToString("F2"));
+            }
+
+            decimal iva = subtotal * 0.15m;
+            decimal total = subtotal + iva;
+
+            Console.WriteLine("\n{0,-20} ${1}", "subtotal", subtotal.ToString("F2"));
+            Console.WriteLine("{0,-20} ${1}", "descuento", "0");
+            Console.WriteLine("{0,-20} ${1}", "subtotal con IVA 15%", iva.ToString("F2"));
+            Console.WriteLine("{0,-20} ${1}", "total", total.ToString("F2"));
+        }
+
+        private static string ObtenerNombreCiudad(int idCiudad)
+        {
+            return idCiudad switch
+            {
+                1 => "Quito",
+                2 => "Guayaquil",
+                3 => "Cuenca",
+                4 => "Miami",
+                5 => "Bogotá",
+                6 => "Lima",
+                _ => $"ID:{idCiudad}"
+            };
+        }
+
+
+        private static async Task VerFacturasAsync(Usuarios usuario)
+        {
+            var facturas = await facturaController.GetFacturaporUsuario(usuario.IdUsuario);
+
+            Console.WriteLine("\n===== TUS FACTURAS =====");
+
+            if (facturas == null || facturas.Length == 0)
+            {
+                Console.WriteLine("No tienes facturas registradas.");
+                return;
+            }
+
+            Console.WriteLine("{0,-5} {1,-15} {2,-20} {3,-15} {4,-15}",
+                "ID", "Número", "Fecha", "Sin IVA", "Con IVA");
+            Console.WriteLine(new string('-', 75));
+
+            foreach (var factura in facturas)
+            {
+                Console.WriteLine("{0,-5} {1,-15} {2,-20} ${3,-13} ${4,-13}",
+                    factura.IdFactura,
+                    factura.NumeroFactura,
+                    factura.FechaFactura.ToString("yyyy-MM-dd HH:mm"),
+                    factura.PrecioSinIVA.ToString("F2"),
+                    factura.PrecioConIVA.ToString("F2"));
+            }
+
+            Console.Write("\nIngrese el ID de la factura para ver detalles (0 para salir): ");
+            if (!int.TryParse(Console.ReadLine(), out int idSeleccionado) || idSeleccionado < 0)
+            {
+                Console.WriteLine("ID inválido.");
+                return;
+            }
+
+            if (idSeleccionado == 0)
+                return;
+
+            var detalle = await facturaController.GetFactura(idSeleccionado);
+            if (detalle == null || detalle.BoletosRelacionados == null)
+            {
+                Console.WriteLine("Factura no encontrada o sin boletos asociados.");
+                return;
+            }
+
+            await MostrarDetalleFacturaAsync(detalle, usuario);
+        }
+
 
         private static async Task VerBoletosAsync(Usuarios usuario)
         {

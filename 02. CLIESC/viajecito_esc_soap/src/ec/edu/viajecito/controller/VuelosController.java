@@ -34,49 +34,49 @@ public class VuelosController {
     }
 
     // Convierte String "yyyy-MM-dd" a XMLGregorianCalendar solo con fecha
-public XMLGregorianCalendar toXMLGregorianCalendarDateTime(String fecha) throws Exception {
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-    Date date = sdf.parse(fecha);
+    public XMLGregorianCalendar toXMLGregorianCalendarDateTime(String fecha) throws Exception {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date date = sdf.parse(fecha);
 
-    GregorianCalendar cal = new GregorianCalendar();
-    cal.setTime(date);
+        GregorianCalendar cal = new GregorianCalendar();
+        cal.setTime(date);
 
-    XMLGregorianCalendar xmlCal = DatatypeFactory.newInstance().newXMLGregorianCalendar(
-        cal.get(GregorianCalendar.YEAR),
-        cal.get(GregorianCalendar.MONTH) + 1,
-        cal.get(GregorianCalendar.DAY_OF_MONTH),
-        0, 0, 0, 0, DatatypeConstants.FIELD_UNDEFINED
-    );
+        XMLGregorianCalendar xmlCal = DatatypeFactory.newInstance().newXMLGregorianCalendar(
+            cal.get(GregorianCalendar.YEAR),
+            cal.get(GregorianCalendar.MONTH) + 1,
+            cal.get(GregorianCalendar.DAY_OF_MONTH),
+            0, 0, 0, 0, DatatypeConstants.FIELD_UNDEFINED
+        );
 
-    return xmlCal;
-}
-
-public List<Vuelo> obtenerVuelosPorCiudad(String origen, String destino, String fechaSalidaString) {
-    try {
-        if (fechaSalidaString == null || fechaSalidaString.trim().isEmpty()) {
-            throw new IllegalArgumentException("La fecha de salida no puede estar vacía");
-        }
-
-        XMLGregorianCalendar fechaSalida = toXMLGregorianCalendarDateTime(fechaSalidaString);
-        
-        System.out.println("Fecha XML: " + fechaSalida.toXMLFormat());
-
-
-        ArrayOfVuelos arraySoap = AeroCondorClient.buscarVuelos(origen, destino, fechaSalida);
-        List<Vuelo> vuelos = new ArrayList<>();
-
-        if (arraySoap != null && arraySoap.getVuelos() != null) {
-            for (Vuelos vueloSoap : arraySoap.getVuelos()) {
-                vuelos.add(convertirVuelo(vueloSoap));
-            }
-        }
-
-        return vuelos;
-    } catch (Exception e) {
-        e.printStackTrace();
-        return new ArrayList<>();
+        return xmlCal;
     }
-}
+
+    public List<Vuelo> obtenerVuelosPorCiudad(String origen, String destino, String fechaSalidaString) {
+        try {
+            if (fechaSalidaString == null || fechaSalidaString.trim().isEmpty()) {
+                throw new IllegalArgumentException("La fecha de salida no puede estar vacía");
+            }
+
+            XMLGregorianCalendar fechaSalida = toXMLGregorianCalendarDateTime(fechaSalidaString);
+
+            System.out.println("Fecha XML: " + fechaSalida.toXMLFormat());
+
+
+            ArrayOfVuelos arraySoap = AeroCondorClient.buscarVuelos(origen, destino, fechaSalida);
+            List<Vuelo> vuelos = new ArrayList<>();
+
+            if (arraySoap != null && arraySoap.getVuelos() != null) {
+                for (Vuelos vueloSoap : arraySoap.getVuelos()) {
+                    vuelos.add(convertirVuelo(vueloSoap));
+                }
+            }
+
+            return vuelos;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
 
 
     // Método auxiliar para convertir Vuelos (SOAP) → Vuelo (local)
