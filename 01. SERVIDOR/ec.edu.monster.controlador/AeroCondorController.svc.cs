@@ -235,26 +235,26 @@ namespace ec.edu.monster.servicio
             {
                 try
                 {
-                    // Obtener precio unitario del vuelo
-                    decimal precioUnitario = 0;
-                    var precioCmd = new SqlCommand("SELECT valor FROM vuelos WHERE id_vuelo = @id", cn, trans);
-                    precioCmd.Parameters.AddWithValue("@id", request.IdVuelo);
-                    var result = precioCmd.ExecuteScalar();
-                    if (result == null) throw new Exception("Vuelo no encontrado");
-                    precioUnitario = (decimal)result;
+                    decimal totalSinIVA = 0;
 
-                    // Calcular totales
+                    // Calcular total sin IVA por todos los vuelos
+                    foreach (var vueloCompra in request.Vuelos)
+                    {
+                        var precioCmd = new SqlCommand("SELECT valor FROM vuelos WHERE id_vuelo = @id", cn, trans);
+                        precioCmd.Parameters.AddWithValue("@id", vueloCompra.IdVuelo);
+                        var result = precioCmd.ExecuteScalar();
+                        if (result == null) throw new Exception("Vuelo no encontrado");
 
-                    decimal totalSinIVA = precioUnitario * request.Cantidad; 
+                        decimal precioUnitario = (decimal)result;
+                        totalSinIVA += precioUnitario * vueloCompra.Cantidad;
+                    }
+
                     decimal totalConIVA = totalSinIVA * 1.15m; // 15% IVA
 
-
-                    // Obtener último número de factura
+                    // Obtener número de factura
                     var getLastFacturaCmd = new SqlCommand("SELECT MAX(id_factura) FROM facturas", cn, trans);
                     var lastFacturaObj = getLastFacturaCmd.ExecuteScalar();
                     int nextFacturaNum = (lastFacturaObj != DBNull.Value) ? Convert.ToInt32(lastFacturaObj) + 1 : 1;
-
-                    // Formato FAC-000000001
                     string numeroFactura = "FAC-" + nextFacturaNum.ToString("D9");
 
                     // Insertar factura
@@ -270,47 +270,60 @@ namespace ec.edu.monster.servicio
 
                     int idFactura = Convert.ToInt32(facturaCmd.ExecuteScalar());
 
-                    // Insertar boletos asociados a la factura
-                    for (int i = 0; i < request.Cantidad; i++)
+                    // Procesar cada vuelo
+                    foreach (var vueloCompra in request.Vuelos)
                     {
-                        var boletoCmd = new SqlCommand(@"
-                    INSERT INTO boletos (numero_boleto, id_vuelo, id_usuario, precio_compra, id_factura)
-                    VALUES (@num, @vuelo, @usuario, @precio, @factura)", cn, trans);
+                        // Obtener precio unitario
+                        decimal precioUnitario;
+                        var precioCmd = new SqlCommand("SELECT valor FROM vuelos WHERE id_vuelo = @id", cn, trans);
+                        precioCmd.Parameters.AddWithValue("@id", vueloCompra.IdVuelo);
+                        var result = precioCmd.ExecuteScalar();
+                        if (result == null) throw new Exception("Vuelo no encontrado");
+                        precioUnitario = (decimal)result;
 
-                        boletoCmd.Parameters.AddWithValue("@num", Guid.NewGuid().ToString().Substring(0, 10).ToUpper());
-                        boletoCmd.Parameters.AddWithValue("@vuelo", request.IdVuelo);
-                        boletoCmd.Parameters.AddWithValue("@usuario", request.IdUsuario);
-                        boletoCmd.Parameters.AddWithValue("@precio", precioUnitario);
-                        boletoCmd.Parameters.AddWithValue("@factura", idFactura);
+                        // Insertar boletos
+                        for (int i = 0; i < vueloCompra.Cantidad; i++)
+                        {
+                            var boletoCmd = new SqlCommand(@"
+                        INSERT INTO boletos (numero_boleto, id_vuelo, id_usuario, precio_compra, id_factura)
+                        VALUES (@num, @vuelo, @usuario, @precio, @factura)", cn, trans);
 
-                        if (boletoCmd.ExecuteNonQuery() <= 0)
+                            boletoCmd.Parameters.AddWithValue("@num", Guid.NewGuid().ToString().Substring(0, 10).ToUpper());
+                            boletoCmd.Parameters.AddWithValue("@vuelo", vueloCompra.IdVuelo);
+                            boletoCmd.Parameters.AddWithValue("@usuario", request.IdUsuario);
+                            boletoCmd.Parameters.AddWithValue("@precio", precioUnitario);
+                            boletoCmd.Parameters.AddWithValue("@factura", idFactura);
+
+                            if (boletoCmd.ExecuteNonQuery() <= 0)
+                            {
+                                trans.Rollback();
+                                return false;
+                            }
+                        }
+
+                        // Actualizar cupos disponibles
+                        var updateCmd = new SqlCommand(@"
+                    UPDATE vuelos 
+                    SET disponibles = disponibles - @cantidad 
+                    WHERE id_vuelo = @vuelo AND disponibles >= @cantidad", cn, trans);
+
+                        updateCmd.Parameters.AddWithValue("@cantidad", vueloCompra.Cantidad);
+                        updateCmd.Parameters.AddWithValue("@vuelo", vueloCompra.IdVuelo);
+
+                        if (updateCmd.ExecuteNonQuery() <= 0)
                         {
                             trans.Rollback();
                             return false;
                         }
                     }
 
-                    // Actualizar disponibles
-                    var updateCmd = new SqlCommand(@"
-                UPDATE vuelos 
-                SET disponibles = disponibles - @cantidad 
-                WHERE id_vuelo = @vuelo AND disponibles >= @cantidad", cn, trans);
-
-                    updateCmd.Parameters.AddWithValue("@cantidad", request.Cantidad);
-                    updateCmd.Parameters.AddWithValue("@vuelo", request.IdVuelo);
-
-                    if (updateCmd.ExecuteNonQuery() <= 0)
-                    {
-                        trans.Rollback();
-                        return false;
-                    }
-
                     trans.Commit();
                     return true;
                 }
-                catch
+                catch (Exception ex)
                 {
                     trans.Rollback();
+                    Console.WriteLine("Error en compra: " + ex.Message);
                     return false;
                 }
             }
