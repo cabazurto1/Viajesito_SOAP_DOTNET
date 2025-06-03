@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 
 const parser = new XMLParser({ ignoreAttributes: false });
-const endpoint = 'http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc';
+const endpoint = 'http://192.168.18.158:8094/ec.edu.monster.controlador/AeroCondorController.svc';
 
 // Obtener boletos de un usuario específico
 export const obtenerBoletosPorUsuario = async (idUsuario) => {
@@ -55,19 +55,36 @@ export const obtenerBoletosPorUsuario = async (idUsuario) => {
 };
 
 // Registrar compra de boletos
-export const registrarBoleto = async ({ idVuelo, idUsuario, cantidad = 1 }) => {
+
+export const registrarBoletos = async ({ idUsuario, vuelos }) => {
+  // vuelos debe ser un array de objetos: [{ idVuelo: 1, cantidad: 2 }, { idVuelo: 2, cantidad: 3 }]
+  
+  const vuelosXML = vuelos.map(
+    ({ idVuelo, cantidad }) => `
+      <ec:VueloCompra>
+        <ec:IdVuelo>${idVuelo}</ec:IdVuelo>
+        <ec:Cantidad>${cantidad}</ec:Cantidad>
+      </ec:VueloCompra>
+    `
+  ).join('');
+
   const body = `
-    <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
-      <s:Body>
-        <Comprar xmlns="http://tempuri.org/">
-          <request xmlns:a="http://schemas.datacontract.org/2004/07/ec.edu.monster.modelo">
-            <a:IdVuelo>${idVuelo}</a:IdVuelo>
-            <a:IdUsuario>${idUsuario}</a:IdUsuario>
-            <a:Cantidad>${cantidad}</a:Cantidad>
-          </request>
-        </Comprar>
-      </s:Body>
-    </s:Envelope>`;
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                      xmlns:tem="http://tempuri.org/"
+                      xmlns:ec="http://schemas.datacontract.org/2004/07/ec.edu.monster.modelo">
+      <soapenv:Header/>
+      <soapenv:Body>
+        <tem:Comprar>
+          <tem:request>
+            <ec:IdUsuario>${idUsuario}</ec:IdUsuario>
+            <ec:Vuelos>
+              ${vuelosXML}
+            </ec:Vuelos>
+          </tem:request>
+        </tem:Comprar>
+      </soapenv:Body>
+    </soapenv:Envelope>
+  `;
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -85,7 +102,7 @@ export const registrarBoleto = async ({ idVuelo, idUsuario, cantidad = 1 }) => {
     const result = json['s:Envelope']['s:Body']['ComprarResponse']['ComprarResult'];
     return typeof result === 'string' ? result.toLowerCase() === 'true' : !!result;
   } catch (error) {
-    console.error('❌ Error al procesar compra:', error);
+    console.error('❌ Error al procesar compra múltiple:', error);
     return false;
   }
 };

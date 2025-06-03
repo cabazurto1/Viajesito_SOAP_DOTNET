@@ -17,6 +17,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFacturasPorUsuario, obtenerFacturaPorId } from '../controllers/FacturaController';
 import { obtenerUsuarioPorId } from '../controllers/UsuarioController';
 import { obtenerCiudades } from '../controllers/CiudadController';
+import { obtenerVueloPorId } from '../controllers/VueloController';
+import { obtenerCiudadPorId } from '../controllers/CiudadController';
 
 export default function FacturasView() {
   const router = useRouter();
@@ -31,6 +33,7 @@ export default function FacturasView() {
   const [facturaSeleccionada, setFacturaSeleccionada] = useState(null);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [boletosConDetalles, setBoletosConDetalles] = useState([]);
 
   // Determinar número de columnas basado en el tamaño de pantalla
   const getNumColumns = () => {
@@ -38,32 +41,6 @@ export default function FacturasView() {
     if (isTablet) return 2;
     return 1;
   };
-
-  // Función corregida para obtener el nombre de la ciudad
-  const getNombreCiudad = (codigo) => {
-    if (!codigo || !ciudades.length) return 'N/A';
-    const ciudad = ciudades.find(c => c.codigo === codigo);
-    return ciudad ? ciudad.nombre : 'N/A';
-  };
-
-  // Función helper para extraer códigos de ciudad de los boletos
-  const obtenerCodigoCiudad = (ciudadData) => {
-  if (!ciudadData) return null;
-  
-  // Si ya es string, lo retornamos
-  if (typeof ciudadData === 'string') return ciudadData;
-
-  // Posibles estructuras
-  return (
-    ciudadData['a:CodigoCiudad'] ||
-    ciudadData['CodigoCiudad'] ||
-    ciudadData['codigo'] ||
-    ciudadData['a:codigo'] ||
-    Object.values(ciudadData).find(v => typeof v === 'string' && v.length === 3) || // Ej: 'UIO', 'GYE'
-    null
-  );
-};
-
 
   // Key para forzar re-render cuando cambia el número de columnas
   const flatListKey = `${getNumColumns()}-${width}`;
@@ -73,10 +50,13 @@ export default function FacturasView() {
       const cargarFacturas = async () => {
         setLoading(true);
         try {
-          let idUsuarioActual = idParam;
-          if (!idUsuarioActual) {
-            idUsuarioActual = await AsyncStorage.getItem('idUsuario');
-          }
+          const idUsuarioActual = await obtenerIdUsuarioSeguro(idParam);
+            if (!idUsuarioActual) {
+            Alert.alert('Error', 'No se pudo obtener el usuario actual');
+            router.replace('/');
+            return;
+            }
+
 
           const [datos, listaCiudades] = await Promise.all([
             getFacturasPorUsuario(idUsuarioActual),
@@ -101,6 +81,7 @@ export default function FacturasView() {
     }, [idParam])
   );
 
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleString('es-ES', {
@@ -111,6 +92,20 @@ export default function FacturasView() {
       minute: '2-digit'
     });
   };
+    const handleVolverMenu = async () => {
+    const idUsuarioActual = await obtenerIdUsuarioSeguro(idParam);
+
+
+    if (idUsuarioActual) {
+        router.replace({
+        pathname: '/views/MenuView', // o la ruta que uses
+        params: { idUsuario: idUsuarioActual }
+        });
+    } else {
+        router.replace('/');
+    }
+    };
+
 
   const formatDateShort = (dateString) => {
     const date = new Date(dateString);
@@ -121,24 +116,91 @@ export default function FacturasView() {
     });
   };
 
-  const handleFacturaPress = async (idFactura, idUsuario) => {
-    try {
-      const [detalle, usuario] = await Promise.all([
-        obtenerFacturaPorId(Number(idFactura)),
-        obtenerUsuarioPorId(Number(idUsuario))
-      ]);
-      if (detalle) {
-        console.log('Detalle de factura:', detalle);
-        setFacturaSeleccionada(detalle);
-        setUsuarioSeleccionado(usuario);
-        setModalVisible(true);
-      } else {
-        alert('No se pudo obtener el detalle de la factura.');
-      }
-    } catch (error) {
-      console.error('Error al obtener detalle:', error);
+const obtenerIdUsuarioSeguro = async (idParam) => {
+  if (idParam) return parseInt(idParam);
+  const id = await AsyncStorage.getItem('idUsuario');
+  return id ? parseInt(id) : null;
+};
+
+const handleFacturaPress = async (idFactura, idUsuario) => {
+  try {
+    const idUsuarioActual = await obtenerIdUsuarioSeguro(idUsuario);
+
+    const [detalle, usuario] = await Promise.all([
+      obtenerFacturaPorId(Number(idFactura)),
+      obtenerUsuarioPorId(Number(idUsuarioActual))
+    ]);
+
+    if (detalle) {
+      console.log('Detalle de factura:', detalle);
+      setFacturaSeleccionada(detalle);
+      setUsuarioSeleccionado(usuario);
+
+      // Cargar detalles de vuelos y ciudades para cada boleto
+      await cargarDetallesBoletos(detalle['a:BoletosRelacionados']?.['a:Boletos'] || []);
+
+      setModalVisible(true);
+    } else {
+      alert('No se pudo obtener el detalle de la factura.');
     }
-  };
+  } catch (error) {
+    console.error('Error al obtener detalle:', error);
+  }
+};
+
+
+
+const cargarDetallesBoletos = async (boletos) => {
+  try {
+    // 👉 Normaliza a array si viene como objeto
+    const lista = Array.isArray(boletos) ? boletos : [boletos];
+
+    const boletosConInfo = await Promise.all(
+      lista.map(async (boleto) => {
+        try {
+          const vuelo = await obtenerVueloPorId(boleto['a:IdVuelo']);
+          if (vuelo) {
+            const [ciudadOrigen, ciudadDestino] = await Promise.all([
+              obtenerCiudadPorId(vuelo['a:IdCiudadOrigen']),
+              obtenerCiudadPorId(vuelo['a:IdCiudadDestino']),
+            ]);
+            return {
+              ...boleto,
+              vuelo: vuelo,
+              ciudadOrigen: ciudadOrigen?.['a:NombreCiudad'] ?? 'Ciudad desconocida',
+              ciudadDestino: ciudadDestino?.['a:NombreCiudad'] ?? 'Ciudad desconocida',
+            };
+          } else {
+            return {
+              ...boleto,
+              ciudadOrigen: 'Ciudad desconocida',
+              ciudadDestino: 'Ciudad desconocida',
+            };
+          }
+        } catch (error) {
+          console.error('Error interno por boleto:', error);
+          return {
+            ...boleto,
+            ciudadOrigen: 'Error al cargar',
+            ciudadDestino: 'Error al cargar',
+          };
+        }
+      })
+    );
+
+    setBoletosConDetalles(boletosConInfo);
+  } catch (error) {
+    console.error('Error general en cargarDetallesBoletos:', error);
+    // Aplica normalización también aquí
+    const lista = Array.isArray(boletos) ? boletos : [boletos];
+    setBoletosConDetalles(lista.map((b) => ({
+      ...b,
+      ciudadOrigen: 'Error al cargar',
+      ciudadDestino: 'Error al cargar',
+    })));
+  }
+};
+
 
   const getCardStyle = () => {
     const numColumns = getNumColumns();
@@ -157,7 +219,12 @@ export default function FacturasView() {
 
   // Función para calcular totales correctamente
   const calcularTotales = (factura) => {
-    const boletos = factura['a:BoletosRelacionados']?.['a:Boletos'] || [];
+    let boletos = factura['a:BoletosRelacionados']?.['a:Boletos'] || [];
+    // Normalizar: si es un solo objeto, envolver en array
+    if (!Array.isArray(boletos)) {
+    boletos = [boletos];
+    }
+
     const subtotal = boletos.reduce((sum, boleto) => {
       return sum + parseFloat(boleto['a:PrecioCompra'] || 0);
     }, 0);
@@ -242,41 +309,39 @@ export default function FacturasView() {
         ) : (
           <>
             {isLargeScreen ? (
-              <View style={styles.tableMainContainer}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={true} style={styles.horizontalScroll}>
-                  <View style={[styles.table, { minWidth: Math.max(900, width * 0.9) }]}>
-                    <View style={[styles.tableHeader, { backgroundColor: '#35798e' }]}>
-                      <Text style={[styles.tableColHeader, styles.tableColNum]}>#</Text>
-                      <Text style={[styles.tableColHeader, styles.tableColDetail]}>Factura</Text>
-                      <Text style={[styles.tableColHeader, styles.tableColCant]}>Fecha</Text>
-                      <Text style={[styles.tableColHeader, styles.tableColPrice]}>Total</Text>
-                    </View>
-                    {facturas.map((item, index) => (
-                      <TouchableOpacity
-                        key={item['a:IdFactura'] || index}
-                        onPress={() => handleFacturaPress(item['a:IdFactura'], item['a:IdUsuario'])}
-                      >
-                        <View style={[
-                          styles.tableRow,
-                          index % 2 === 0 && styles.tableRowEven
-                        ]}>
-                          <Text style={[styles.tableCol, styles.tableColNum]}>
-                            {index + 1}
-                          </Text>
-                          <Text style={[styles.tableCol, styles.tableColDetail]}>
-                            {item['a:NumeroFactura']}
-                          </Text>
-                          <Text style={[styles.tableCol, styles.tableColCant]}>
-                            {formatDate(item['a:FechaFactura'])}
-                          </Text>
-                          <Text style={[styles.tableCol, styles.tableColPrice]}>
-                            ${item['a:PrecioConIVA']}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
+              <View style={styles.tableWrapper}>
+                <View style={styles.tableContainer}>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableColHeader, styles.tableColNum]}>#</Text>
+                    <Text style={[styles.tableColHeader, styles.tableColFactura]}>Factura</Text>
+                    <Text style={[styles.tableColHeader, styles.tableColFecha]}>Fecha</Text>
+                    <Text style={[styles.tableColHeader, styles.tableColTotal]}>Total</Text>
                   </View>
-                </ScrollView>
+                  {facturas.map((item, index) => (
+                    <TouchableOpacity
+                      key={item['a:IdFactura'] || index}
+                      onPress={() => handleFacturaPress(item['a:IdFactura'], item['a:IdUsuario'])}
+                    >
+                      <View style={[
+                        styles.tableRow,
+                        index % 2 === 0 && styles.tableRowEven
+                      ]}>
+                        <Text style={[styles.tableCol, styles.tableColNum]}>
+                          {index + 1}
+                        </Text>
+                        <Text style={[styles.tableCol, styles.tableColFactura]}>
+                          {item['a:NumeroFactura']}
+                        </Text>
+                        <Text style={[styles.tableCol, styles.tableColFecha]}>
+                          {formatDate(item['a:FechaFactura'])}
+                        </Text>
+                        <Text style={[styles.tableCol, styles.tableColTotal]}>
+                          ${item['a:PrecioConIVA']}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             ) : (
               <FlatList
@@ -371,59 +436,79 @@ export default function FacturasView() {
                       ]}>
                         📄 Detalle de Boletos
                       </Text>
-                      <View style={styles.centeredTableContainer}>
-                        <ScrollView 
-                          horizontal 
-                          showsHorizontalScrollIndicator={true}
-                          contentContainerStyle={styles.horizontalScrollContent}
-                        >
-                          <View style={styles.table}>
-                            <View style={[
-                              styles.tableHeader,
-                              isLargeScreen && styles.tableHeaderLarge
-                            ]}>
-                              <Text style={[styles.tableColHeader, styles.tableColNumBoleto]}>Num. Boleto</Text>
-                              <Text style={[styles.tableColHeader, styles.tableColDetalleBoleto]}>Detalle</Text>
-                              <Text style={[styles.tableColHeader, styles.tableColCant]}>Cantidad</Text>
-                              <Text style={[styles.tableColHeader, styles.tableColPrecioUnit]}>Precio Unitario</Text>
+                      
+                      {/* Tabla responsive para boletos */}
+                      {isLargeScreen ? (
+                        // Versión desktop/tablet - tabla horizontal
+                        <View style={styles.boletosTableContainer}>
+                          <ScrollView 
+                            horizontal 
+                            showsHorizontalScrollIndicator={true}
+                            contentContainerStyle={styles.horizontalScrollContent}
+                          >
+                            <View style={styles.boletosTable}>
+                              <View style={styles.boletosTableHeader}>
+                                <Text style={[styles.boletosTableColHeader, styles.boletosColNum]}>#</Text>
+                                <Text style={[styles.boletosTableColHeader, styles.boletosColBoleto]}>Núm. Boleto</Text>
+                                <Text style={[styles.boletosTableColHeader, styles.boletosColRuta]}>Ruta</Text>
+                                <Text style={[styles.boletosTableColHeader, styles.boletosColFecha]}>Fecha</Text>
+                                <Text style={[styles.boletosTableColHeader, styles.boletosColCant]}>Cant.</Text>
+                                <Text style={[styles.boletosTableColHeader, styles.boletosColPrecio]}>Precio Unit.</Text>
+                              </View>
+                              {boletosConDetalles.map((boleto, idx) => (
+                                <View key={idx} style={[styles.boletosTableRow, idx % 2 === 0 && styles.boletosTableRowEven]}>
+                                  <Text style={[styles.boletosTableCol, styles.boletosColNum]}>{idx + 1}</Text>
+                                  <Text style={[styles.boletosTableCol, styles.boletosColBoleto]}>
+                                    {boleto['a:NumeroBoleto']}
+                                  </Text>
+                                  <Text style={[styles.boletosTableCol, styles.boletosColRuta]}>
+                                    {`${boleto.ciudadOrigen} → ${boleto.ciudadDestino}`}
+                                  </Text>
+                                  <Text style={[styles.boletosTableCol, styles.boletosColFecha]}>
+                                    {formatDateShort(boleto['a:FechaCompra'])}
+                                  </Text>
+                                  <Text style={[styles.boletosTableCol, styles.boletosColCant]}>1</Text>
+                                  <Text style={[styles.boletosTableCol, styles.boletosColPrecio]}>
+                                    ${parseFloat(boleto['a:PrecioCompra']).toFixed(2)}
+                                  </Text>
+                                </View>
+                              ))}
                             </View>
-{facturaSeleccionada['a:BoletosRelacionados']?.['a:Boletos']?.map((b, idx) => {
-  const mapaCiudades = {
-    1: 'Quito',
-    2: 'Guayaquil',
-    3: 'Cuenca',
-    4: 'Miami',
-  };
-
-  // Usamos los IDs directamente del vuelo si existen, o quemamos uno por defecto
-  const idOrigen = b['a:IdVuelo']?.['a:IdCiudadOrigen'] || 1;
-  const idDestino = b['a:IdVuelo']?.['a:IdCiudadDestino'] || 2;
-
-  const ciudadOrigen = mapaCiudades[idOrigen] || 'Ciudad desconocida';
-  const ciudadDestino = mapaCiudades[idDestino] || 'Ciudad desconocida';
-
-  return (
-    <View key={idx} style={[styles.tableRow, idx % 2 === 0 && styles.tableRowEven]}>
-      <Text style={[styles.tableCol, styles.tableColNumBoleto]}>
-        {b['a:NumeroBoleto']}
-      </Text>
-      <Text style={[styles.tableCol, styles.tableColDetalleBoleto]}>
-        {`${ciudadOrigen} ➝ ${ciudadDestino} - ${formatDateShort(b['a:FechaCompra'])}`}
-      </Text>
-      <Text style={[styles.tableCol, styles.tableColCant]}>1</Text>
-      <Text style={[styles.tableCol, styles.tableColPrecioUnit]}>
-        ${parseFloat(b['a:PrecioCompra']).toFixed(2)}
-      </Text>
-    </View>
-  );
-})}
-
-
-
-
-                          </View>
-                        </ScrollView>
-                      </View>
+                          </ScrollView>
+                        </View>
+                      ) : (
+                        // Versión móvil - cards verticales
+                        <View style={styles.boletosCardContainer}>
+                          {boletosConDetalles.map((boleto, idx) => (
+                            <View key={idx} style={styles.boletoCard}>
+                              <View style={styles.boletoCardHeader}>
+                                <Text style={styles.boletoCardTitle}>🎫 Boleto #{idx + 1}</Text>
+                                <Text style={styles.boletoCardNumber}>{boleto['a:NumeroBoleto']}</Text>
+                              </View>
+                              <View style={styles.boletoCardContent}>
+                                <View style={styles.boletoCardRow}>
+                                  <Text style={styles.boletoCardLabel}>🛫 Ruta:</Text>
+                                  <Text style={styles.boletoCardValue}>
+                                    {`${boleto.ciudadOrigen} → ${boleto.ciudadDestino}`}
+                                  </Text>
+                                </View>
+                                <View style={styles.boletoCardRow}>
+                                  <Text style={styles.boletoCardLabel}>📅 Fecha:</Text>
+                                  <Text style={styles.boletoCardValue}>
+                                    {formatDateShort(boleto['a:FechaCompra'])}
+                                  </Text>
+                                </View>
+                                <View style={styles.boletoCardRow}>
+                                  <Text style={styles.boletoCardLabel}>💰 Precio:</Text>
+                                  <Text style={styles.boletoCardPrice}>
+                                    ${parseFloat(boleto['a:PrecioCompra']).toFixed(2)}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      )}
                     </View>
 
                     <View style={[styles.section, styles.totalSection]}>
@@ -449,7 +534,7 @@ export default function FacturasView() {
                             </View>
                             <View style={styles.totalRow}>
                               <Text style={[styles.totalLabel, isLargeScreen && styles.totalLabelLarge]}>
-                                💰 Subtotal con IVA (15%):
+                                💰 IVA (15%):
                               </Text>
                               <Text style={[styles.totalValue, isLargeScreen && styles.totalValueLarge]}>
                                 ${totales.iva}
@@ -494,6 +579,16 @@ export default function FacturasView() {
           </View>
         </Modal>
       </View>
+      <View style={styles.menuButtonContainer}>
+  <TouchableOpacity
+    onPress={handleVolverMenu}
+    style={styles.volverBtn}
+    activeOpacity={0.85}
+  >
+    <Text style={styles.volverText}>← Volver al Menú</Text>
+  </TouchableOpacity>
+</View>
+
     </SafeAreaView>
   );
 }
@@ -541,14 +636,75 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12
   },
-  tableMainContainer: {
+
+  // Estilos corregidos para tabla principal
+  tableWrapper: {
     flex: 1,
+    alignItems: 'center',
     paddingHorizontal: 16,
-    alignItems: 'center'
+    paddingBottom: 20
   },
-  horizontalScroll: {
-    width: '100%'
+  tableContainer: {
+    width: '100%',
+    maxWidth: 900,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5
   },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#35798e',
+    paddingVertical: 16,
+    paddingHorizontal: 8
+  },
+  tableColHeader: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    textAlign: 'center'
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef'
+  },
+  tableRowEven: {
+    backgroundColor: '#f8f9fa'
+  },
+  tableCol: {
+    fontSize: 14,
+    color: '#212529',
+    textAlign: 'center'
+  },
+  
+  // Columnas simétricas para tabla principal
+  tableColNum: {
+    flex: 0.8, // 10%
+    minWidth: 40
+  },
+  tableColFactura: {
+    flex: 2.5, // 30%
+    minWidth: 120,
+    fontWeight: '600'
+  },
+  tableColFecha: {
+    flex: 3, // 40%
+    minWidth: 140
+  },
+  tableColTotal: {
+    flex: 1.7, // 20%
+    minWidth: 80,
+    fontWeight: 'bold',
+    color: '#27ae60'
+  },
+
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -737,7 +893,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#35798e',
     borderRadius: 6,
     padding: 12,
-    marginBottom: 2
+    marginBottom: 2,
+    textAlign: 'center'
   },
   tableHeaderLarge: {
     padding: 16
@@ -855,12 +1012,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 8,
     margin: 20,
-    alignItems: 'center'
+    alignItems: 'center',
+    alignSelf: 'center',         // 👈 centra horizontalmente
+    minWidth: 120   
   },
   closeBtnLarge: {
     paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 10
+    borderRadius: 10,
+    minWidth: 140  
   },
   closeText: { 
     color: '#fff', 
@@ -869,5 +1029,137 @@ const styles = StyleSheet.create({
   },
   closeTextLarge: {
     fontSize: 18
-  }
+  },
+  boletosTableContainer: {
+  backgroundColor: '#fff',
+  borderRadius: 10,
+  padding: 12,
+  marginTop: 10
+},
+boletosTable: {
+  minWidth: 800,
+},menuButtonContainer: {
+  paddingTop: 10,
+  paddingBottom: 30,
+  backgroundColor: '#f8f9fa',
+  alignItems: 'center'
+},
+volverBtn: {
+  backgroundColor: '#4e88a9',
+  paddingVertical: 10,
+  paddingHorizontal: 20,
+  borderRadius: 8,
+  alignItems: 'center',
+  alignSelf: 'center',
+  maxWidth: 220,
+},
+volverText: {
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 16,
+}
+,
+boletosTableHeader: {
+  flexDirection: 'row',
+  backgroundColor: '#35798e',
+  paddingVertical: 10,
+  paddingHorizontal: 6,
+  borderTopLeftRadius: 8,
+  borderTopRightRadius: 8
+},
+boletosTableColHeader: {
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 14,
+  textAlign: 'center'
+},
+boletosTableRow: {
+  flexDirection: 'row',
+  paddingVertical: 10,
+  paddingHorizontal: 6,
+  borderBottomWidth: 1,
+  borderBottomColor: '#dee2e6'
+},
+boletosTableRowEven: {
+  backgroundColor: '#f8f9fa'
+},
+boletosTableCol: {
+  fontSize: 13,
+  color: '#212529',
+  textAlign: 'center'
+},
+boletosColNum: {
+  width: 50
+},
+boletosColBoleto: {
+  width: 130
+},
+boletosColRuta: {
+  width: 220
+},
+boletosColFecha: {
+  width: 120
+},
+boletosColCant: {
+  width: 60
+},
+boletosColPrecio: {
+  width: 100,
+  fontWeight: 'bold',
+  color: '#27ae60'
+},
+
+// versión móvil: tarjetas
+boletosCardContainer: {
+  gap: 12
+},
+boletoCard: {
+  backgroundColor: '#fff',
+  padding: 14,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: '#e0e0e0',
+  marginBottom: 10
+},
+boletoCardHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 10
+},
+boletoCardTitle: {
+  fontSize: 16,
+  fontWeight: 'bold',
+  color: '#35798e'
+},
+boletoCardNumber: {
+  fontSize: 14,
+  fontWeight: 'bold',
+  color: '#6c757d'
+},
+boletoCardContent: {
+  gap: 8
+},
+boletoCardRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center'
+},
+boletoCardLabel: {
+  fontSize: 14,
+  fontWeight: '500',
+  color: '#495057'
+},
+boletoCardValue: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#212529'
+},
+boletoCardPrice: {
+  fontSize: 14,
+  fontWeight: 'bold',
+  color: '#27ae60'
+},
+
 });
+    

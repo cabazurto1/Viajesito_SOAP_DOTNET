@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 
 const parser = new XMLParser({ ignoreAttributes: false });
-const endpoint = 'http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc';
+const endpoint = 'http://192.168.18.158:8094/ec.edu.monster.controlador/AeroCondorController.svc';
 
 export const obtenerVuelos = async () => {
   const body = `
@@ -75,4 +75,29 @@ export const buscarVuelos = async (origen, destino, fechaSalida) => {
     Capacidad: v['a:Capacidad'],
     Disponibles: v['a:Disponibles']
   }));
+};
+
+export const obtenerVueloPorId = async (id) => {
+  const body = `
+    <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+      <s:Body>
+        <ObtenerVueloPorId xmlns="http://tempuri.org/">
+          <id>${id}</id>
+        </ObtenerVueloPorId>
+      </s:Body>
+    </s:Envelope>`;
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/xml;charset=UTF-8',
+      SOAPAction: 'http://tempuri.org/IAeroCondorController/ObtenerVueloPorId'
+    },
+    body
+  });
+
+  const xml = await response.text();
+  const json = parser.parse(xml);
+
+  return json['s:Envelope']?.['s:Body']?.['ObtenerVueloPorIdResponse']?.['ObtenerVueloPorIdResult'] || null;
 };

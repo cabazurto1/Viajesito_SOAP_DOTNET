@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View,
   TextInput,
@@ -9,11 +10,12 @@ import {
   TouchableOpacity,
   Platform,
   KeyboardAvoidingView,
-  Modal
+  Modal,
+  BackHandler
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { login } from '../app/controllers/UsuarioController';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // ✅ IMPORTANTE
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginView() {
   const router = useRouter();
@@ -26,6 +28,71 @@ export default function LoginView() {
   const [mensaje, setMensaje] = useState('');
   const [esExito, setEsExito] = useState(false);
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(null);
+  const [hasReloaded, setHasReloaded] = useState(false);
+
+  const passwordRef = useRef(null);
+
+  // Función para recarga simulada
+const recargarUnaVez = async () => {
+  try {
+    const yaSeRecargoKey = 'app_reloaded_session';
+    const yaSeRecargo = await AsyncStorage.getItem(yaSeRecargoKey);
+
+    if (!yaSeRecargo) {
+      await AsyncStorage.setItem(yaSeRecargoKey, 'true');
+      await AsyncStorage.clear();
+    }
+
+    resetearEstadoCompleto();
+    setHasReloaded(true);
+  } catch (error) {
+    console.error('Error en recarga:', error);
+    resetearEstadoCompleto();
+    setHasReloaded(true);
+  }
+};
+
+
+
+  const resetearEstadoCompleto = () => {
+    setUsername('');
+    setPassword('');
+    setSecure(true);
+    setLoading(false);
+    setIrARegistro(false);
+    setModalVisible(false);
+    setMensaje('');
+    setEsExito(false);
+    setUsuarioAutenticado(null);
+  };
+
+  useEffect(() => {
+    recargarUnaVez();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (hasReloaded) {
+        resetearEstadoCompleto();
+      }
+    }, [hasReloaded])
+  );
+
+  useEffect(() => {
+    const backAction = () => true;
+    const handler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => handler.remove();
+  }, []);
+
+  if (!hasReloaded) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center' }]}>
+        <Image source={require('../assets/images/logo_monster.png')} style={styles.logo} />
+        <Text style={[styles.title, { marginTop: 20 }]}>Inicializando aplicación...</Text>
+        <Text style={{ color: '#888', marginTop: 10 }}>Por favor espera</Text>
+      </View>
+    );
+  }
 
   if (irARegistro) {
     const RegisterView = require('./RegisterView').default;
@@ -45,8 +112,8 @@ export default function LoginView() {
       const user = await login(username.trim(), password.trim());
 
       if (user && user.IdUsuario) {
-        await AsyncStorage.clear(); 
-        await AsyncStorage.setItem('idUsuario', user.IdUsuario.toString()); // ✅ CLAVE
+        await AsyncStorage.clear();
+        await AsyncStorage.setItem('idUsuario', user.IdUsuario.toString());
         setMensaje(`✅ Bienvenido ${user.Nombre}`);
         setUsuarioAutenticado(user);
         setEsExito(true);
@@ -80,11 +147,15 @@ export default function LoginView() {
           onChangeText={setUsername}
           placeholderTextColor="#888"
           autoCapitalize="none"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
+          blurOnSubmit={false}
         />
       </View>
 
       <View style={styles.inputWrapper}>
         <TextInput
+          ref={passwordRef}
           style={styles.input}
           placeholder="Contraseña"
           secureTextEntry={secure}
@@ -92,6 +163,8 @@ export default function LoginView() {
           onChangeText={setPassword}
           placeholderTextColor="#888"
           autoCapitalize="none"
+          returnKeyType="done"
+          onSubmitEditing={handleLogin}
         />
         <TouchableOpacity onPress={() => setSecure(!secure)} style={styles.toggle}>
           <Text style={styles.toggleText}>{secure ? 'Mostrar' : 'Ocultar'}</Text>
@@ -113,7 +186,6 @@ export default function LoginView() {
         </Text>
       </TouchableOpacity>
 
-      {/* ✅ MODAL DE MENSAJE */}
       <Modal
         visible={modalVisible}
         transparent

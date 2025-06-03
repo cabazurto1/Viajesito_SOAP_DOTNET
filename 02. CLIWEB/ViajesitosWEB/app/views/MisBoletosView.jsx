@@ -36,8 +36,11 @@ export default function MisBoletosView() {
           if (!idUsuarioActual) {
             idUsuarioActual = await AsyncStorage.getItem('idUsuario');
             if (!idUsuarioActual) throw new Error('Usuario no autenticado');
-          } else {
-            await AsyncStorage.setItem('idUsuario', idUsuarioActual);
+          }  else {
+            const existente = await AsyncStorage.getItem('idUsuario');
+            if (!existente || existente !== idUsuarioActual) {
+              await AsyncStorage.setItem('idUsuario', idUsuarioActual);
+            }
           }
 
           const datos = await obtenerBoletosPorUsuario(idUsuarioActual);

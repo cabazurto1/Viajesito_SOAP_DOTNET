@@ -13,6 +13,7 @@ import { obtenerVuelos } from '../controllers/VueloController';
 import { obtenerCiudades } from '../controllers/CiudadController';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ScrollView } from 'react-native';
 
 export default function VuelosDisponiblesView() {
   const [vuelos, setVuelos] = useState([]);
@@ -179,7 +180,9 @@ export default function VuelosDisponiblesView() {
             showsVerticalScrollIndicator={false}
           />
         ) : (
-          renderTabla()
+            <ScrollView style={{ flex: 1, width: '100%' }}>
+              {renderTabla()}
+            </ScrollView>
         )}
 
         <Pressable
