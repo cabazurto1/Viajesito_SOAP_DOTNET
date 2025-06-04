@@ -21,35 +21,53 @@ namespace ec.edu.monster.vista
                 return;
             }
 
-            int origenIdx = PedirIndiceCiudad("origen", ciudades, -1);
-            int destinoIdx = PedirIndiceCiudad("destino", ciudades, origenIdx);
+            var listaVuelos = new List<ServiceReference1.VueloCompra>();
+            decimal total = 0;
 
-            DateTime fechaSalida = PedirFechaSalida();
-
-            var ciudadOrigen = ciudades[origenIdx];
-            var ciudadDestino = ciudades[destinoIdx];
-
-            var vuelos = await client.BuscarVuelosAsync(
-                ciudadOrigen.CodigoCiudad,
-                ciudadDestino.CodigoCiudad,
-                fechaSalida
-            );
-
-            if (vuelos == null || vuelos.Length == 0)
+            do
             {
-                Console.WriteLine("No hay vuelos disponibles para esa fecha.");
-                return;
-            }
+                int origenIdx = PedirIndiceCiudad("origen", ciudades, -1);
+                int destinoIdx = PedirIndiceCiudad("destino", ciudades, origenIdx);
 
-            int vueloIdx = PedirIndiceVuelo(vuelos);
-            var vuelo = vuelos[vueloIdx];
+                DateTime fechaSalida = PedirFechaSalida();
 
-            int cantidad = PedirCantidadBoletos(vuelo);
+                var ciudadOrigen = ciudades[origenIdx];
+                var ciudadDestino = ciudades[destinoIdx];
 
-            decimal total = vuelo.Valor * cantidad;
-            Console.WriteLine($"Total a pagar: ${total}");
+                var vuelos = await client.BuscarVuelosAsync(
+                    ciudadOrigen.CodigoCiudad,
+                    ciudadDestino.CodigoCiudad,
+                    fechaSalida
+                );
 
-            if (!Confirmar("¿Confirmar compra? (s/n): "))
+                if (vuelos == null || vuelos.Length == 0)
+                {
+                    Console.WriteLine("No hay vuelos disponibles para esa fecha.");
+                    continue;
+                }
+
+                int vueloIdx = PedirIndiceVuelo(vuelos);
+                var vuelo = vuelos[vueloIdx];
+
+                int cantidad = PedirCantidadBoletos(vuelo);
+
+                total += vuelo.Valor * cantidad;
+
+                var vueloCompra = new ServiceReference1.VueloCompra
+                {
+                    IdVuelo = vuelo.IdVuelo,
+                    Cantidad = cantidad
+                };
+
+                listaVuelos.Add(vueloCompra);
+
+                Console.WriteLine($"Subtotal actual: ${total}");
+
+            } while (Confirmar("¿Desea agregar otro vuelo a la compra? (s/n): "));
+
+            Console.WriteLine($"Total a pagar por todos los vuelos: ${total}");
+
+            if (!Confirmar("¿Confirmar compra total? (s/n): "))
             {
                 Console.WriteLine("Compra cancelada.");
                 return;
@@ -57,14 +75,14 @@ namespace ec.edu.monster.vista
 
             var request = new CompraBoletoRequest
             {
-                IdVuelo = vuelo.IdVuelo,
                 IdUsuario = usuario.IdUsuario,
-                Cantidad = cantidad
+                Vuelos = listaVuelos.ToArray()
             };
 
             var result = await client.ComprarAsync(request);
             Console.WriteLine(result ? "Compra realizada con éxito." : "Error en la compra.");
         }
+
 
         private static int PedirIndiceCiudad(string tipo, Ciudades[] ciudades, int excluir)
         {

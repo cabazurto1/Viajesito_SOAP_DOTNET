@@ -13,7 +13,7 @@ namespace ServiceReference1
     
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "8.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="Ciudades", Namespace="http://schemas.datacontract.org/2004/07/ec.edu.monster.modelo")]
     public partial class Ciudades : object
     {
@@ -65,7 +65,7 @@ namespace ServiceReference1
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "8.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="Vuelos", Namespace="http://schemas.datacontract.org/2004/07/ec.edu.monster.modelo")]
     public partial class Vuelos : object
     {
@@ -192,7 +192,7 @@ namespace ServiceReference1
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "8.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="Boletos", Namespace="http://schemas.datacontract.org/2004/07/ec.edu.monster.modelo")]
     public partial class Boletos : object
     {
@@ -304,14 +304,49 @@ namespace ServiceReference1
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "8.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="CompraBoletoRequest", Namespace="http://schemas.datacontract.org/2004/07/ec.edu.monster.modelo")]
     public partial class CompraBoletoRequest : object
     {
         
-        private int IdVueloField;
-        
         private int IdUsuarioField;
+        
+        private ServiceReference1.VueloCompra[] VuelosField;
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public int IdUsuario
+        {
+            get
+            {
+                return this.IdUsuarioField;
+            }
+            set
+            {
+                this.IdUsuarioField = value;
+            }
+        }
+        
+        [System.Runtime.Serialization.DataMemberAttribute()]
+        public ServiceReference1.VueloCompra[] Vuelos
+        {
+            get
+            {
+                return this.VuelosField;
+            }
+            set
+            {
+                this.VuelosField = value;
+            }
+        }
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "8.0.0")]
+    [System.Runtime.Serialization.DataContractAttribute(Name="VueloCompra", Namespace="http://schemas.datacontract.org/2004/07/ec.edu.monster.modelo")]
+    public partial class VueloCompra : object
+    {
+        
+        private int IdVueloField;
         
         private int CantidadField;
         
@@ -329,19 +364,6 @@ namespace ServiceReference1
         }
         
         [System.Runtime.Serialization.DataMemberAttribute(Order=1)]
-        public int IdUsuario
-        {
-            get
-            {
-                return this.IdUsuarioField;
-            }
-            set
-            {
-                this.IdUsuarioField = value;
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute(Order=2)]
         public int Cantidad
         {
             get
@@ -356,7 +378,7 @@ namespace ServiceReference1
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "8.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="Usuarios", Namespace="http://schemas.datacontract.org/2004/07/ec.edu.monster.modelo")]
     public partial class Usuarios : object
     {
@@ -468,7 +490,7 @@ namespace ServiceReference1
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "8.0.0")]
     [System.Runtime.Serialization.DataContractAttribute(Name="Facturas", Namespace="http://schemas.datacontract.org/2004/07/ec.edu.monster.modelo")]
     public partial class Facturas : object
     {
@@ -579,7 +601,7 @@ namespace ServiceReference1
         }
     }
     
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "8.0.0")]
     [System.ServiceModel.ServiceContractAttribute(ConfigurationName="ServiceReference1.IAeroCondorController")]
     public interface IAeroCondorController
     {
@@ -711,13 +733,13 @@ namespace ServiceReference1
         System.Threading.Tasks.Task<ServiceReference1.Facturas[]> GetFacturasPorUsuarioAsync(int idUsuario);
     }
     
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "8.0.0")]
     public interface IAeroCondorControllerChannel : ServiceReference1.IAeroCondorController, System.ServiceModel.IClientChannel
     {
     }
     
     [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "8.0.0")]
     public partial class AeroCondorControllerClient : System.ServiceModel.ClientBase<ServiceReference1.IAeroCondorController>, ServiceReference1.IAeroCondorController
     {
         
@@ -976,6 +998,13 @@ namespace ServiceReference1
             return System.Threading.Tasks.Task.Factory.FromAsync(((System.ServiceModel.ICommunicationObject)(this)).BeginOpen(null, null), new System.Action<System.IAsyncResult>(((System.ServiceModel.ICommunicationObject)(this)).EndOpen));
         }
         
+        #if !NET6_0_OR_GREATER
+        public virtual System.Threading.Tasks.Task CloseAsync()
+        {
+            return System.Threading.Tasks.Task.Factory.FromAsync(((System.ServiceModel.ICommunicationObject)(this)).BeginClose(null, null), new System.Action<System.IAsyncResult>(((System.ServiceModel.ICommunicationObject)(this)).EndClose));
+        }
+        #endif
+        
         private static System.ServiceModel.Channels.Binding GetBindingForEndpoint(EndpointConfiguration endpointConfiguration)
         {
             if ((endpointConfiguration == EndpointConfiguration.BasicHttpBinding_IAeroCondorController))
@@ -994,7 +1023,7 @@ namespace ServiceReference1
         {
             if ((endpointConfiguration == EndpointConfiguration.BasicHttpBinding_IAeroCondorController))
             {
-                return new System.ServiceModel.EndpointAddress("http://10.40.31.126:8094/ec.edu.monster.controlador/AeroCondorController.svc");
+                return new System.ServiceModel.EndpointAddress("http://localhost:55325/ec.edu.monster.controlador/AeroCondorController.svc");
             }
             throw new System.InvalidOperationException(string.Format("No se pudo encontrar un punto de conexión con el nombre \"{0}\".", endpointConfiguration));
         }

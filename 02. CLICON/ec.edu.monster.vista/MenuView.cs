@@ -60,6 +60,7 @@ namespace ec.edu.monster.vista
         {
             Console.WriteLine($"\nFactura: {factura.NumeroFactura}");
             Console.WriteLine("Vendedor: Viajecitos S.A.\t\tRUC:1710708973001");
+            Console.WriteLine($"Fecha de emisión: {factura.FechaFactura}");
 
             Console.WriteLine("\nDatos del usuario");
             Console.WriteLine($"Nombre Cliente: {usuario.Nombre}");
