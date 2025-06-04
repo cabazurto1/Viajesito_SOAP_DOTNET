@@ -32,10 +32,10 @@ public class FacturasController {
         Facturas facturaSoap = AeroCondorClient.obtenerFacturaPorId(idFactura);
         if (facturaSoap == null) return null;
 
-        return convertirFactura(facturaSoap);
-    }
+            return convertirFactura(facturaSoap);
+        }
 
-    private Factura convertirFactura(Facturas facturaSoap) {
+        private Factura convertirFactura(Facturas facturaSoap) {
         Factura factura = new Factura();
 
         factura.setIdFactura(facturaSoap.getIdFactura());
@@ -54,7 +54,6 @@ public class FacturasController {
 
         // Convertir boletos relacionados
         List<Boleto> boletos = new ArrayList<>();
-        Integer idVuelo = null;
 
         if (facturaSoap.getBoletosRelacionados() != null &&
             facturaSoap.getBoletosRelacionados().getValue() != null &&
@@ -62,17 +61,11 @@ public class FacturasController {
 
             List<Boletos> boletosSoap = facturaSoap.getBoletosRelacionados().getValue().getBoletos();
 
-            // Obtener el idVuelo del primer boleto (si hay al menos uno)
-            if (!boletosSoap.isEmpty()) {
-                idVuelo = boletosSoap.get(0).getIdVuelo();
-            }
-
-            // Buscar el vuelo completo solo una vez
-            Vuelo vuelo = buscarVueloPorId(idVuelo);
-
             for (Boletos boletoSoap : boletosSoap) {
                 Boleto boleto = convertirBoleto(boletoSoap);
-                boleto.setVuelo(vuelo); // asignar el vuelo encontrado
+                // Aquí corregimos el problema: buscamos el vuelo de cada boleto individualmente
+                Vuelo vuelo = buscarVueloPorId(boletoSoap.getIdVuelo());
+                boleto.setVuelo(vuelo);
                 boletos.add(boleto);
             }
         }
@@ -80,6 +73,7 @@ public class FacturasController {
         factura.setBoletos(boletos);
         return factura;
     }
+
 
     private Boleto convertirBoleto(Boletos boletoSoap) {
         Boleto boleto = new Boleto();

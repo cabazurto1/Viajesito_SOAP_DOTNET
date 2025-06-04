@@ -4,30 +4,22 @@
  */
 package ec.edu.viajecito.model;
 
+import java.util.List;
+
 /**
  *
  * @author Drouet
  */
 public class CompraBoletoRequest {
-    public Integer idVuelo;
-    public Integer idUsuario;
-    public int cantidad;
+    private Integer idUsuario;
+    private List<VueloCompra> vuelos;
 
     public CompraBoletoRequest() {
     }
 
-    public CompraBoletoRequest(Integer idVuelo, Integer idUsuario, int cantidad) {
-        this.idVuelo = idVuelo;
+    public CompraBoletoRequest(Integer idUsuario, List<VueloCompra> vuelos) {
         this.idUsuario = idUsuario;
-        this.cantidad = cantidad;
-    }
-
-    public Integer getIdVuelo() {
-        return idVuelo;
-    }
-
-    public void setIdVuelo(Integer idVuelo) {
-        this.idVuelo = idVuelo;
+        this.vuelos = vuelos;
     }
 
     public Integer getIdUsuario() {
@@ -38,14 +30,12 @@ public class CompraBoletoRequest {
         this.idUsuario = idUsuario;
     }
 
-    public int getCantidad() {
-        return cantidad;
+    public List<VueloCompra> getVuelos() {
+        return vuelos;
     }
 
-    public void setCantidad(int cantidad) {
-        this.cantidad = cantidad;
+    public void setVuelos(List<VueloCompra> vuelos) {
+        this.vuelos = vuelos;
     }
-    
-    
 }
 

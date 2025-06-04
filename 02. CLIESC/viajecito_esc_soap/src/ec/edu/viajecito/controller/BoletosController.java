@@ -15,10 +15,13 @@ import ec.edu.viajecito.model.Ciudad;
 import ec.edu.viajecito.model.CompraBoletoRequest;
 import ec.edu.viajecito.model.Usuario;
 import ec.edu.viajecito.model.Vuelo;
+import ec.edu.viajecito.model.VueloCompra;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import javax.xml.bind.JAXBElement;
+import javax.xml.namespace.QName;
 
 /**
  *
@@ -90,11 +93,35 @@ public class BoletosController {
 
     public boolean comprarBoletos(CompraBoletoRequest compraBoletoRequest) {
         ec.edu.viajecito.client.CompraBoletoRequest compraBoletoRequest1 = new ec.edu.viajecito.client.CompraBoletoRequest();
-        
-        compraBoletoRequest1.setCantidad(compraBoletoRequest.cantidad);
-        compraBoletoRequest1.setIdUsuario(compraBoletoRequest.idUsuario);
-        compraBoletoRequest1.setIdVuelo(compraBoletoRequest.idVuelo);
-        
+
+        // Asignar el ID del usuario
+        compraBoletoRequest1.setIdUsuario(compraBoletoRequest.getIdUsuario());
+
+        // Crear lista de VueloCompra SOAP
+        List<ec.edu.viajecito.client.VueloCompra> vuelosSoap = new ArrayList<>();
+        for (VueloCompra vuelo : compraBoletoRequest.getVuelos()) {
+            ec.edu.viajecito.client.VueloCompra vueloSoap = new ec.edu.viajecito.client.VueloCompra();
+            vueloSoap.setIdVuelo(vuelo.getIdVuelo());
+            vueloSoap.setCantidad(vuelo.getCantidad());
+            vuelosSoap.add(vueloSoap);
+        }
+
+        // Crear el ArrayOfVueloCompra SOAP y añadir los vuelos
+        ec.edu.viajecito.client.ArrayOfVueloCompra arrayOfVueloCompra = new ec.edu.viajecito.client.ArrayOfVueloCompra();
+        arrayOfVueloCompra.getVueloCompra().addAll(vuelosSoap);
+
+        // Envolver en JAXBElement
+        JAXBElement<ec.edu.viajecito.client.ArrayOfVueloCompra> vuelosElement =
+            new JAXBElement<>(
+                new QName("http://schemas.datacontract.org/2004/07/ec.edu.monster.modelo", "Vuelos"),
+                ec.edu.viajecito.client.ArrayOfVueloCompra.class,
+                arrayOfVueloCompra
+            );
+
+        compraBoletoRequest1.setVuelos(vuelosElement);
+
+        // Enviar al cliente SOAP
         return AeroCondorClient.comprar(compraBoletoRequest1);
     }
+
 }
