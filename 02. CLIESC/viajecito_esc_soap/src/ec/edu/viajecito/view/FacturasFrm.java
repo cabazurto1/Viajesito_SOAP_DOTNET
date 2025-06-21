@@ -148,12 +148,11 @@ public class FacturasFrm extends javax.swing.JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
         jPanel1.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.setForeground(new java.awt.Color(0, 0, 0));
 
         jLabel3.setBackground(new java.awt.Color(27, 27, 30));
         jLabel3.setFont(new java.awt.Font("Maiandra GD", 1, 36)); // NOI18N
         jLabel3.setForeground(new java.awt.Color(60, 59, 46));
-        jLabel3.setText("Mis Boletos");
+        jLabel3.setText("Mis Facturas");
 
         btnSalir.setBackground(new java.awt.Color(35, 103, 138));
         btnSalir.setFont(new java.awt.Font("Maiandra GD", 1, 24)); // NOI18N
@@ -172,10 +171,8 @@ public class FacturasFrm extends javax.swing.JFrame {
         jLabel5.setForeground(new java.awt.Color(60, 59, 46));
         jLabel5.setText("VIAJECITO S.A.");
 
-        tblFactura.setBackground(new java.awt.Color(255, 255, 255));
         tblFactura.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
         tblFactura.setFont(new java.awt.Font("Maiandra GD", 0, 18)); // NOI18N
-        tblFactura.setForeground(new java.awt.Color(0, 0, 0));
         tblFactura.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
 

@@ -73,21 +73,21 @@
       <DependentUpon>AeroCondorController.svc</DependentUpon>
     </Compile>
     <Compile Include="ec.edu.monster.db\ConexionBD.cs" />
+    <Compile Include="ec.edu.monster.modelo\Amortizacion.cs" />
     <Compile Include="ec.edu.monster.modelo\Boletos.cs" />
     <Compile Include="ec.edu.monster.modelo\Ciudades.cs" />
     <Compile Include="ec.edu.monster.modelo\CompraBoletoRequest.cs" />
     <Compile Include="ec.edu.monster.modelo\Facturas.cs" />
     <Compile Include="ec.edu.monster.modelo\Usuarios.cs" />
     <Compile Include="ec.edu.monster.modelo\Vuelos.cs" />
+    <Compile Include="ec.edu.monster.prueba\Test.cs" />
     <Compile Include="ec.edu.monster.servicio\AeroCondorService.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="ec.edu.monster.prueba\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>

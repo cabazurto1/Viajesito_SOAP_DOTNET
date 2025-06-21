@@ -226,6 +226,64 @@ namespace ec.edu.monster.servicio
             }
             return lista;
         }
+        private List<Amortizacion> GenerarTablaAmortizacion(decimal monto, double tasaAnual, int cuotas, int idFactura)
+        {
+            var lista = new List<Amortizacion>();
+            double tasaMensual = tasaAnual / 12 / 100;
+            decimal saldo = monto;
+
+            decimal cuota = monto * (decimal)(tasaMensual / (1 - Math.Pow(1 + tasaMensual, -cuotas)));
+
+            for (int i = 1; i <= cuotas; i++)
+            {
+                decimal interes = saldo * (decimal)tasaMensual;
+                decimal capital = cuota - interes;
+                saldo -= capital;
+
+                lista.Add(new Amortizacion
+                {
+                    IdFactura = idFactura,
+                    NumeroCuota = i,
+                    ValorCuota = Math.Round(cuota, 2),
+                    InteresPagado = Math.Round(interes, 2),
+                    CapitalPagado = Math.Round(capital, 2),
+                    Saldo = Math.Round(Math.Max(saldo, 0), 2)
+                });
+            }
+
+            return lista;
+        }
+        public List<Amortizacion> ObtenerAmortizacionPorFactura(int idFactura)
+        {
+            var lista = new List<Amortizacion>();
+            using (var cn = ConexionBD.ObtenerConexion())
+            {
+                var cmd = new SqlCommand(@"
+            SELECT id_amortizacion, id_factura, numero_cuota, 
+                   valor_cuota, interes_pagado, capital_pagado, saldo
+            FROM amortizacion_boletos
+            WHERE id_factura = @id
+            ORDER BY numero_cuota", cn);
+
+                cmd.Parameters.AddWithValue("@id", idFactura);
+                var dr = cmd.ExecuteReader();
+
+                while (dr.Read())
+                {
+                    lista.Add(new Amortizacion
+                    {
+                        IdAmortizacion = (int)dr["id_amortizacion"],
+                        IdFactura = (int)dr["id_factura"],
+                        NumeroCuota = (int)dr["numero_cuota"],
+                        ValorCuota = (decimal)dr["valor_cuota"],
+                        InteresPagado = (decimal)dr["interes_pagado"],
+                        CapitalPagado = (decimal)dr["capital_pagado"],
+                        Saldo = (decimal)dr["saldo"]
+                    });
+                }
+            }
+            return lista;
+        }
 
 
         public bool Comprar(CompraBoletoRequest request)
@@ -269,6 +327,29 @@ namespace ec.edu.monster.servicio
                     facturaCmd.Parameters.AddWithValue("@coniva", totalConIVA);
 
                     int idFactura = Convert.ToInt32(facturaCmd.ExecuteScalar());
+
+                    // Si es pago a crédito, generar y guardar la tabla de amortización
+                    if (request.EsCredito)
+                    {
+                        var amortizaciones = GenerarTablaAmortizacion(totalConIVA, request.TasaInteresAnual, request.NumeroCuotas, idFactura);
+
+                        foreach (var cuota in amortizaciones)
+                        {
+                            var amortCmd = new SqlCommand(@"
+                        INSERT INTO amortizacion_boletos 
+                        (id_factura, numero_cuota, valor_cuota, interes_pagado, capital_pagado, saldo)
+                        VALUES (@factura, @num, @valor, @interes, @capital, @saldo)", cn, trans);
+
+                            amortCmd.Parameters.AddWithValue("@factura", cuota.IdFactura);
+                            amortCmd.Parameters.AddWithValue("@num", cuota.NumeroCuota);
+                            amortCmd.Parameters.AddWithValue("@valor", cuota.ValorCuota);
+                            amortCmd.Parameters.AddWithValue("@interes", cuota.InteresPagado);
+                            amortCmd.Parameters.AddWithValue("@capital", cuota.CapitalPagado);
+                            amortCmd.Parameters.AddWithValue("@saldo", cuota.Saldo);
+
+                            amortCmd.ExecuteNonQuery();
+                        }
+                    }
 
                     // Procesar cada vuelo
                     foreach (var vueloCompra in request.Vuelos)
@@ -328,7 +409,6 @@ namespace ec.edu.monster.servicio
                 }
             }
         }
-
 
 
 

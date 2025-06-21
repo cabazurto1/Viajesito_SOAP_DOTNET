@@ -140,6 +140,9 @@ namespace ec.edu.monster.controlador
         bool AsociarBoletosAFactura(int idFactura, List<int> idsBoletos);
         [OperationContract]
         List<Facturas> GetFacturasPorUsuario(int idUsuario);
+        [OperationContract]
+        List<Amortizacion> ObtenerAmortizacionPorFactura(int idFactura);
+
 
     }
 }

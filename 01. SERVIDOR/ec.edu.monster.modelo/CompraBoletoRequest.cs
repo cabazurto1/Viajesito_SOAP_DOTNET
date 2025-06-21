@@ -22,5 +22,18 @@ namespace ec.edu.monster.modelo
 
         [DataMember(Order = 2)]
         public List<VueloCompra> Vuelos { get; set; }
+
+        [DataMember(Order = 3)]
+        public bool EsCredito { get; set; } // true = pago a crédito, false = pago directo (débito)
+
+        [DataMember(Order = 4)]
+        public int NumeroCuotas { get; set; } // Solo aplica si EsCredito == true
+
+        [DataMember(Order = 5)]
+        public double TasaInteresAnual { get; set; } // Ej: 16.5
+
+        // Este campo se puede usar para retornar la tabla desde el servidor si lo deseas
+        [DataMember(Order = 6)]
+        public List<Amortizacion> TablaAmortizacion { get; set; }
     }
 }

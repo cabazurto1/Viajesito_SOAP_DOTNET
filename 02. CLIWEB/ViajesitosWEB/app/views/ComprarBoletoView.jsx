@@ -44,6 +44,37 @@ export default function ComprarBoletoView() {
   // Estados para el carrito de compras
   const [carrito, setCarrito] = useState([]);
   const [mostrarCarrito, setMostrarCarrito] = useState(false);
+  const [tipoPago, setTipoPago] = useState('contado'); // 'contado' o 'diferido'
+  const [numeroCuotas, setNumeroCuotas] = useState(3); // Valores fijos: [1,3,6,12,15,24]
+  const TASA_ANUAL_FIJA = 16.5; // tasa en % anual
+  const [tablaAmortizacion, setTablaAmortizacion] = useState([]);
+  const [mostrarTabla, setMostrarTabla] = useState(false);
+
+function calcularAmortizacion(monto, cuotas, tasaAnual = 16.5) {
+  const tasaMensual = tasaAnual / 12 / 100;
+  const cuotaFija = monto * (tasaMensual / (1 - Math.pow(1 + tasaMensual, -cuotas)));
+
+  let saldo = monto;
+  let interesTotal = 0;
+  const tabla = [];
+
+  for (let i = 1; i <= cuotas; i++) {
+    const interes = saldo * tasaMensual;
+    const capital = cuotaFija - interes;
+    saldo -= capital;
+    interesTotal += interes;
+
+    tabla.push({
+      cuota: i,
+      valorCuota: cuotaFija.toFixed(2),
+      interes: interes.toFixed(2),
+      capital: capital.toFixed(2),
+      saldo: Math.max(saldo, 0).toFixed(2),
+    });
+  }
+
+  return { tabla, interesTotal: interesTotal.toFixed(2), cuotaMensual: cuotaFija.toFixed(2) };
+}
 
   useFocusEffect(
     React.useCallback(() => {
@@ -87,6 +118,9 @@ export default function ComprarBoletoView() {
     setMensaje('');
     setModalVisible(false);
     setMostrarCarrito(false);
+    setTipoPago('contado');      // <- Esto reinicia el tipo de pago
+    setNumeroCuotas(3);          // <- Esto reinicia las cuotas
+    
   };
 
   const handleVolverMenu = async () => {
@@ -335,9 +369,13 @@ const limpiarItemCarrito = (idVuelo) => {
       }));
 
       const resultado = await registrarBoletos({
-        idUsuario: idUsuarioActual,
-        vuelos: vuelosParaCompra
-      });
+      idUsuario: idUsuarioActual,
+      vuelos: vuelosParaCompra,
+      esCredito: tipoPago === 'diferido',
+      numeroCuotas: tipoPago === 'diferido' ? numeroCuotas : 0,
+      tasaInteresAnual: tipoPago === 'diferido' ? TASA_ANUAL_FIJA : 0
+    });
+
 
       if (resultado) {
         const totalBoletos = carrito.reduce((sum, item) => sum + item.cantidad, 0);
@@ -704,12 +742,13 @@ const VueloItem = ({ vuelo }) => {
 
         {/* Modal del carrito */}
         <Modal visible={mostrarCarrito} transparent animationType="slide">
-          <View style={styles.modalContainer}>
-            <View style={[
-              styles.modalContent,
-              isDesktop && styles.modalContentDesktop,
-              styles.carritoModal
-            ]}>
+        <View style={styles.modalContainer}>
+          <View style={[
+            styles.modalContent,
+            isDesktop && styles.modalContentDesktop,
+            styles.carritoModal
+          ]}>
+            <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
               <Text style={styles.carritoHeader}>🛒 Carrito de Compras</Text>
               
               {carrito.length === 0 ? (
@@ -731,6 +770,79 @@ const VueloItem = ({ vuelo }) => {
                       {carrito.reduce((sum, item) => sum + item.cantidad, 0)} boleto(s)
                     </Text>
                   </View>
+                  <View style={{ marginVertical: 16 }}>
+  <Text style={styles.subheader}>💰 Tipo de Pago</Text>
+  <View style={{ flexDirection: 'row', justifyContent: 'space-evenly', marginBottom: 8 }}>
+    <TouchableOpacity onPress={() => setTipoPago('contado')} style={[styles.btnBuscar, tipoPago === 'contado' && { backgroundColor: '#198754' }]}>
+      <Text style={styles.btnText}>Pago al Contado</Text>
+    </TouchableOpacity>
+    <TouchableOpacity onPress={() => setTipoPago('diferido')} style={[styles.btnBuscar, tipoPago === 'diferido' && { backgroundColor: '#ffc107' }]}>
+      <Text style={styles.btnText}>Pago Diferido</Text>
+    </TouchableOpacity>
+  </View>
+
+  {tipoPago === 'diferido' && (
+    <>
+      <Text style={styles.subheader}>📆 Número de Cuotas</Text>
+      <ScrollView horizontal contentContainerStyle={{ paddingVertical: 6 }} showsHorizontalScrollIndicator={false}>
+        {[1, 3, 6, 12, 15, 24].map((cuota) => (
+          <TouchableOpacity
+            key={cuota}
+            onPress={() => setNumeroCuotas(cuota)}
+            style={{
+              backgroundColor: numeroCuotas === cuota ? '#35798e' : '#dee2e6',
+              padding: 10,
+              borderRadius: 10,
+              marginRight: 10
+            }}>
+            <Text style={{ color: numeroCuotas === cuota ? '#fff' : '#333', fontWeight: 'bold' }}>{cuota} meses</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <TouchableOpacity
+        style={[styles.btnBuscar, { marginTop: 10, backgroundColor: '#0d6efd' }]}
+        onPress={() => {
+          const total = carrito.reduce((sum, item) => sum + (parseFloat(item.vuelo.Valor) * item.cantidad), 0);
+          const resultado = calcularAmortizacion(total, numeroCuotas, TASA_ANUAL_FIJA);
+          setTablaAmortizacion(resultado);
+          setMostrarTabla(true);
+        }}
+      >
+        <Text style={styles.btnText}>📊 Ver Tabla Amortización</Text>
+      </TouchableOpacity>
+    </>
+  )}
+</View>
+
+<Modal
+  visible={mostrarTabla}
+  animationType="slide"
+  transparent
+>
+  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 16 }}>
+    <View style={{ backgroundColor: 'white', borderRadius: 12, padding: 20, maxHeight: '80%', width: '90%', alignSelf: 'center' }}>
+      <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 12 }}>📄 Resumen de Cuotas:</Text>
+
+      <View style={{ padding: 10, backgroundColor: '#f8f9fa', borderRadius: 8, borderColor: '#dee2e6', borderWidth: 1 }}>
+        <Text style={{ marginBottom: 6 }}>💳 Cuotas Totales: <Text style={{ fontWeight: 'bold' }}>{numeroCuotas}</Text></Text>
+        <Text style={{ marginBottom: 6 }}>💵 Cuota Mensual: <Text style={{ fontWeight: 'bold' }}>${tablaAmortizacion.cuotaMensual}</Text></Text>
+        <Text style={{ marginBottom: 6 }}>📊 Total Intereses: <Text style={{ fontWeight: 'bold', color: '#dc3545' }}>${tablaAmortizacion.interesTotal}</Text></Text>
+        <Text style={{ marginBottom: 6 }}>💰 Total a Pagar: <Text style={{ fontWeight: 'bold' }}>${(numeroCuotas * parseFloat(tablaAmortizacion.cuotaMensual)).toFixed(2)}</Text></Text>
+      </View>
+
+      <TouchableOpacity
+        onPress={() => setMostrarTabla(false)}
+        style={{ backgroundColor: '#dc3545', paddingVertical: 8, paddingHorizontal: 24, alignSelf: 'center', marginTop: 16, borderRadius: 6 }}
+      >
+        <Text style={{ color: 'white', fontWeight: 'bold' }}>Cerrar</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+                  
+                
+
 
                   <TouchableOpacity
                     style={styles.btnComprarTodo}
@@ -743,10 +855,16 @@ const VueloItem = ({ vuelo }) => {
 
               <TouchableOpacity
                 style={styles.modalCloseButton}
-                onPress={() => setMostrarCarrito(false)}
+                onPress={() => {
+                  setMostrarCarrito(false);
+                  setTipoPago('contado');
+                  setNumeroCuotas(3);
+                }}
               >
                 <Text style={styles.modalButtonText}>Cerrar</Text>
               </TouchableOpacity>
+              </ScrollView>
+
             </View>
           </View>
         </Modal>

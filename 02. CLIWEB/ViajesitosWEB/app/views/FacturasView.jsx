@@ -19,6 +19,7 @@ import { obtenerUsuarioPorId } from '../controllers/UsuarioController';
 import { obtenerCiudades } from '../controllers/CiudadController';
 import { obtenerVueloPorId } from '../controllers/VueloController';
 import { obtenerCiudadPorId } from '../controllers/CiudadController';
+import { obtenerAmortizacionPorFactura } from '../controllers/BoletoController';
 
 export default function FacturasView() {
   const router = useRouter();
@@ -122,31 +123,33 @@ const obtenerIdUsuarioSeguro = async (idParam) => {
   return id ? parseInt(id) : null;
 };
 
+const [amortizacion, setAmortizacion] = useState([]);
+const [tipoPago, setTipoPago] = useState("Cargando...");
+const [modalAmortVisible, setModalAmortVisible] = useState(false);
+
 const handleFacturaPress = async (idFactura, idUsuario) => {
+  console.log('🔍 Factura presionada:', idFactura, idUsuario);
   try {
     const idUsuarioActual = await obtenerIdUsuarioSeguro(idUsuario);
 
-    const [detalle, usuario] = await Promise.all([
+    const [detalle, usuario, amort] = await Promise.all([
       obtenerFacturaPorId(Number(idFactura)),
-      obtenerUsuarioPorId(Number(idUsuarioActual))
+      obtenerUsuarioPorId(Number(idUsuarioActual)),
+      obtenerAmortizacionPorFactura(Number(idFactura))
     ]);
 
-    if (detalle) {
-      console.log('Detalle de factura:', detalle);
-      setFacturaSeleccionada(detalle);
-      setUsuarioSeleccionado(usuario);
+    setFacturaSeleccionada(detalle);
+    setUsuarioSeleccionado(usuario);
+    setAmortizacion(amort);
+    setTipoPago(amort.length > 0 ? "Diferido (Crédito)" : "Contado (Pago completo)");
 
-      // Cargar detalles de vuelos y ciudades para cada boleto
-      await cargarDetallesBoletos(detalle['a:BoletosRelacionados']?.['a:Boletos'] || []);
-
-      setModalVisible(true);
-    } else {
-      alert('No se pudo obtener el detalle de la factura.');
-    }
+    await cargarDetallesBoletos(detalle['a:BoletosRelacionados']?.['a:Boletos'] || []);
+    setModalVisible(true);
   } catch (error) {
-    console.error('Error al obtener detalle:', error);
+    console.error("Error al obtener detalle:", error);
   }
 };
+
 
 
 
@@ -428,6 +431,30 @@ const cargarDetallesBoletos = async (boletos) => {
                         </Text>
                       </View>
                     </View>
+<View style={styles.section}>
+  <Text style={[
+    styles.sectionTitle,
+    isLargeScreen && styles.sectionTitleLarge
+  ]}>
+    🏦 Tipo de Pago
+  </Text>
+  <Text style={[
+    styles.sectionItem,
+    isLargeScreen && styles.sectionItemLarge
+  ]}>
+    {tipoPago}
+  </Text>
+</View>
+
+{tipoPago === 'Diferido (Crédito)' && amortizacion.length > 0 && (
+  <TouchableOpacity
+    onPress={() => setModalAmortVisible(true)}
+    style={styles.verAmortBtn}
+  >
+    <Text style={styles.verAmortText}>📊 Ver tabla de amortización</Text>
+  </TouchableOpacity>
+)}
+
 
                     <View style={styles.section}>
                       <Text style={[
@@ -578,6 +605,97 @@ const cargarDetallesBoletos = async (boletos) => {
             </View>
           </View>
         </Modal>
+       <Modal
+  visible={modalAmortVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setModalAmortVisible(false)}
+>
+  <View style={{
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  }}>
+    <View style={{
+      backgroundColor: '#fff',
+      borderRadius: 16,
+      padding: 20,
+      width: '100%',
+      maxWidth: 600,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 10,
+      elevation: 10
+    }}>
+      <Text style={{
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#2f6476',
+        textAlign: 'center',
+        marginBottom: 15
+      }}>
+        📑 Tabla de Amortización
+      </Text>
+
+      {/* Tabla */}
+      <ScrollView horizontal>
+        <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8 }}>
+          {/* Cabecera */}
+          <View style={{
+            flexDirection: 'row',
+            backgroundColor: '#f0f0f0',
+            paddingVertical: 10,
+            paddingHorizontal: 5,
+            borderTopLeftRadius: 8,
+            borderTopRightRadius: 8
+          }}>
+            {["Cuota", "Valor", "Interés", "Capital", "Saldo"].map((title, idx) => (
+              <Text key={idx} style={{ fontWeight: 'bold', width: 80, textAlign: 'center' }}>{title}</Text>
+            ))}
+          </View>
+
+          {/* Filas */}
+          {amortizacion.map((fila, idx) => (
+            <View key={idx} style={{
+              flexDirection: 'row',
+              backgroundColor: idx % 2 === 0 ? '#fff' : '#f9f9f9',
+              paddingVertical: 8,
+              paddingHorizontal: 5,
+              borderBottomWidth: 1,
+              borderBottomColor: '#eee'
+            }}>
+              <Text style={{ width: 80, textAlign: 'center' }}>{fila.numeroCuota}</Text>
+              <Text style={{ width: 80, textAlign: 'center' }}>${fila.valorCuota.toFixed(2)}</Text>
+              <Text style={{ width: 80, textAlign: 'center' }}>${fila.interesPagado.toFixed(2)}</Text>
+              <Text style={{ width: 80, textAlign: 'center' }}>${fila.capitalPagado.toFixed(2)}</Text>
+              <Text style={{ width: 80, textAlign: 'center' }}>${fila.saldo.toFixed(2)}</Text>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* Botón Cerrar */}
+      <TouchableOpacity
+        onPress={() => setModalAmortVisible(false)}
+        style={{
+          alignSelf: 'center',
+          marginTop: 20,
+          paddingVertical: 8,
+          paddingHorizontal: 20,
+          backgroundColor: '#2f6476',
+          borderRadius: 6
+        }}
+      >
+        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Cerrar</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
+
       </View>
       <View style={styles.menuButtonContainer}>
   <TouchableOpacity
@@ -1108,6 +1226,15 @@ boletosColPrecio: {
   fontWeight: 'bold',
   color: '#27ae60'
 },
+modalCloseButton: {
+  backgroundColor: '#ccc',
+  padding: 12,
+  borderRadius: 8,
+  alignItems: 'center',
+  marginTop: 20, // <-- importante para separarlo visualmente
+  marginBottom: 10,
+},
+
 
 // versión móvil: tarjetas
 boletosCardContainer: {
@@ -1159,6 +1286,18 @@ boletoCardPrice: {
   fontSize: 14,
   fontWeight: 'bold',
   color: '#27ae60'
+},
+verAmortBtn: {
+  marginTop: 10,
+  padding: 12,
+  backgroundColor: '#35798e',
+  borderRadius: 8,
+  alignItems: 'center'
+},
+verAmortText: {
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 15
 },
 
 });

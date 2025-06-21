@@ -1,9 +1,9 @@
 import { XMLParser } from 'fast-xml-parser';
 
 const parser = new XMLParser({ ignoreAttributes: false });
-const endpoint = 'http://192.168.18.158:8094/ec.edu.monster.controlador/AeroCondorController.svc';
+const endpoint = 'http://localhost:55325/ec.edu.monster.controlador/AeroCondorController.svc';
 
-// Obtener boletos de un usuario específico
+// 🔹 1. Obtener boletos por usuario
 export const obtenerBoletosPorUsuario = async (idUsuario) => {
   const body = `
     <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
@@ -27,19 +27,16 @@ export const obtenerBoletosPorUsuario = async (idUsuario) => {
   const json = parser.parse(xml);
 
   try {
-    const result =
-      json['s:Envelope']['s:Body']['ObtenerBoletosPorUsuarioResponse']['ObtenerBoletosPorUsuarioResult'];
+    const result = json['s:Envelope']['s:Body']['ObtenerBoletosPorUsuarioResponse']['ObtenerBoletosPorUsuarioResult'];
 
     if (!result) return [];
 
     let boletos = result['a:Boletos'];
 
-    // Si es un solo boleto, lo convertimos a array
     if (!Array.isArray(boletos)) {
       boletos = [boletos];
     }
 
-    // Mapear para dejar solo los campos necesarios
     return boletos.map((b) => ({
       idBoleto: b['a:IdBoleto'],
       numeroBoleto: b['a:NumeroBoleto'],
@@ -54,11 +51,14 @@ export const obtenerBoletosPorUsuario = async (idUsuario) => {
   }
 };
 
-// Registrar compra de boletos
-
-export const registrarBoletos = async ({ idUsuario, vuelos }) => {
-  // vuelos debe ser un array de objetos: [{ idVuelo: 1, cantidad: 2 }, { idVuelo: 2, cantidad: 3 }]
-  
+// 🔹 2. Registrar compra de boletos (con o sin crédito)
+export const registrarBoletos = async ({
+  idUsuario,
+  vuelos,
+  esCredito = false,
+  numeroCuotas = 0,
+  tasaInteresAnual = 0
+}) => {
   const vuelosXML = vuelos.map(
     ({ idVuelo, cantidad }) => `
       <ec:VueloCompra>
@@ -77,14 +77,14 @@ export const registrarBoletos = async ({ idUsuario, vuelos }) => {
         <tem:Comprar>
           <tem:request>
             <ec:IdUsuario>${idUsuario}</ec:IdUsuario>
-            <ec:Vuelos>
-              ${vuelosXML}
-            </ec:Vuelos>
+            <ec:Vuelos>${vuelosXML}</ec:Vuelos>
+            <ec:EsCredito>${esCredito}</ec:EsCredito>
+            <ec:NumeroCuotas>${numeroCuotas}</ec:NumeroCuotas>
+            <ec:TasaInteresAnual>${tasaInteresAnual}</ec:TasaInteresAnual>
           </tem:request>
         </tem:Comprar>
       </soapenv:Body>
-    </soapenv:Envelope>
-  `;
+    </soapenv:Envelope>`;
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -107,4 +107,51 @@ export const registrarBoletos = async ({ idUsuario, vuelos }) => {
   }
 };
 
+// 🔹 3. Obtener tabla de amortización por factura
+export const obtenerAmortizacionPorFactura = async (idFactura) => {
+  const body = `
+    <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+      <s:Body>
+        <ObtenerAmortizacionPorFactura xmlns="http://tempuri.org/">
+          <idFactura>${idFactura}</idFactura>
+        </ObtenerAmortizacionPorFactura>
+      </s:Body>
+    </s:Envelope>`;
 
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/xml;charset=UTF-8',
+      SOAPAction: 'http://tempuri.org/IAeroCondorController/ObtenerAmortizacionPorFactura'
+    },
+    body
+  });
+
+  const xml = await response.text();
+  const json = parser.parse(xml);
+
+  try {
+    const result = json['s:Envelope']['s:Body']['ObtenerAmortizacionPorFacturaResponse']['ObtenerAmortizacionPorFacturaResult'];
+
+    if (!result) return [];
+
+    let amortizaciones = result['a:Amortizacion'];
+
+    if (!Array.isArray(amortizaciones)) {
+      amortizaciones = [amortizaciones];
+    }
+
+    return amortizaciones.map((a) => ({
+      idAmortizacion: a['a:IdAmortizacion'],
+      idFactura: a['a:IdFactura'],
+      numeroCuota: a['a:NumeroCuota'],
+      valorCuota: parseFloat(a['a:ValorCuota']),
+      interesPagado: parseFloat(a['a:InteresPagado']),
+      capitalPagado: parseFloat(a['a:CapitalPagado']),
+      saldo: parseFloat(a['a:Saldo']),
+    }));
+  } catch (error) {
+    console.error('❌ Error al procesar amortización:', error);
+    return [];
+  }
+};

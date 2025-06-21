@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 
 const parser = new XMLParser({ ignoreAttributes: false });
-const endpoint = 'http://192.168.18.158:8094/ec.edu.monster.controlador/AeroCondorController.svc';
+const endpoint = 'http://localhost:55325/ec.edu.monster.controlador/AeroCondorController.svc';
 
 export const obtenerVuelos = async () => {
   const body = `
