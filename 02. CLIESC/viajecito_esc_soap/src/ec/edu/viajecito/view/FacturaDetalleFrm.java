@@ -10,10 +10,12 @@ import ec.edu.viajecito.model.Boleto;
 import ec.edu.viajecito.model.Factura;
 import ec.edu.viajecito.model.Usuario;
 import ec.edu.viajecito.model.Vuelo;
+import ec.edu.viajecito.model.Amortizacion;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -31,6 +33,7 @@ import javax.swing.table.JTableHeader;
 public class FacturaDetalleFrm extends javax.swing.JFrame {
     
     private Usuario usuario;
+    List<Amortizacion> amortizacions = new ArrayList<>();
 
     /**
      * Creates new form LoginFrm
@@ -44,11 +47,24 @@ public class FacturaDetalleFrm extends javax.swing.JFrame {
         lblCorreo.setText(usuario.getCorreo());
         lbltelf.setText(usuario.getTelefono());
         cargarTablaFacturaDetalle(idFactura);
+        cargarAmortizacion(idFactura);
+        
+    }
+    
+    private void cargarAmortizacion(int idFactura) {
+        FacturasController facturasController = new FacturasController();
+        
+        amortizacions = facturasController.obtenerAmortizacionPorFactura(idFactura);   
+        
+        if (!amortizacions.isEmpty()) {
+            btnAmortizacion.setEnabled(true);
+        }
+        
     }
     
     private void cargarTablaFacturaDetalle(int idFactura) {      
         FacturasController facturasController = new FacturasController();
-        
+                
         Factura factura = facturasController.obtenerFacturaPorId(idFactura);
                 
         llenarTabla(factura);    
@@ -198,6 +214,7 @@ public class FacturaDetalleFrm extends javax.swing.JFrame {
         lblCedula3 = new javax.swing.JLabel();
         jLabel13 = new javax.swing.JLabel();
         lblFecha = new javax.swing.JLabel();
+        btnAmortizacion = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
@@ -356,6 +373,19 @@ public class FacturaDetalleFrm extends javax.swing.JFrame {
         lblFecha.setForeground(new java.awt.Color(60, 59, 46));
         lblFecha.setText("2025-06-14");
 
+        btnAmortizacion.setBackground(new java.awt.Color(35, 103, 138));
+        btnAmortizacion.setFont(new java.awt.Font("Maiandra GD", 1, 24)); // NOI18N
+        btnAmortizacion.setForeground(new java.awt.Color(255, 255, 255));
+        btnAmortizacion.setText("Amortización");
+        btnAmortizacion.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btnAmortizacion.setDebugGraphicsOptions(javax.swing.DebugGraphics.NONE_OPTION);
+        btnAmortizacion.setEnabled(false);
+        btnAmortizacion.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAmortizacionActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -367,27 +397,6 @@ public class FacturaDetalleFrm extends javax.swing.JFrame {
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addGap(62, 62, 62)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel8)
-                            .addComponent(jLabel2)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jLabel3)
-                                    .addComponent(jLabel4))
-                                .addGap(25, 25, 25)
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(lblCedula)
-                                    .addComponent(lblNombre)))
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jLabel6)
-                                    .addComponent(jLabel7))
-                                .addGap(18, 18, 18)
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(lblCorreo)
-                                    .addComponent(lbltelf))))
-                        .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                             .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel1Layout.createSequentialGroup()
@@ -415,8 +424,35 @@ public class FacturaDetalleFrm extends javax.swing.JFrame {
                                     .addComponent(lblIVA, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                     .addComponent(lblSubtotal, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 70, Short.MAX_VALUE)
                                     .addComponent(jlabel, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 679, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addContainerGap(15, Short.MAX_VALUE))))
+                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                .addGroup(jPanel1Layout.createSequentialGroup()
+                                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(jLabel8)
+                                        .addComponent(jLabel2)
+                                        .addGroup(jPanel1Layout.createSequentialGroup()
+                                            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                .addComponent(jLabel3)
+                                                .addComponent(jLabel4))
+                                            .addGap(25, 25, 25)
+                                            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                .addComponent(lblCedula)
+                                                .addComponent(lblNombre))))
+                                    .addGap(127, 127, 127)
+                                    .addComponent(btnAmortizacion))
+                                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 679, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addContainerGap(15, Short.MAX_VALUE))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel6)
+                            .addComponent(jLabel7))
+                        .addGap(18, 18, 18)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(lbltelf)
+                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(lblCorreo)
+                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -451,11 +487,14 @@ public class FacturaDetalleFrm extends javax.swing.JFrame {
                     .addComponent(jLabel6)
                     .addComponent(lbltelf))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel7)
-                    .addComponent(lblCorreo))
-                .addGap(12, 12, 12)
-                .addComponent(jLabel8)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jLabel7)
+                            .addComponent(lblCorreo))
+                        .addGap(12, 12, 12)
+                        .addComponent(jLabel8))
+                    .addComponent(btnAmortizacion))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -501,6 +540,11 @@ public class FacturaDetalleFrm extends javax.swing.JFrame {
 
     private void tblFacturaDetalleMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tblFacturaDetalleMouseClicked
     }//GEN-LAST:event_tblFacturaDetalleMouseClicked
+
+    private void btnAmortizacionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAmortizacionActionPerformed
+        AmortizacionFrm amortizacionFrm = new AmortizacionFrm(amortizacions);
+        amortizacionFrm.setVisible(true);
+    }//GEN-LAST:event_btnAmortizacionActionPerformed
 
     /**
      * @param args the command line arguments
@@ -554,6 +598,7 @@ public class FacturaDetalleFrm extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel Descuento;
+    private javax.swing.JButton btnAmortizacion;
     private javax.swing.JButton btnSalir;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;

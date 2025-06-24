@@ -1,6 +1,8 @@
 package ec.edu.viajecito.controller;
 
 import ec.edu.viajecito.client.AeroCondorClient;
+import ec.edu.viajecito.client.Amortizacion;
+import ec.edu.viajecito.client.ArrayOfAmortizacion;
 import ec.edu.viajecito.client.ArrayOfBoletos;
 import ec.edu.viajecito.client.Boletos;
 import ec.edu.viajecito.client.Facturas;
@@ -102,5 +104,25 @@ public class FacturasController {
         }
 
         return null;
+    }
+    
+    public List<ec.edu.viajecito.model.Amortizacion> obtenerAmortizacionPorFactura(Integer idFactura) {
+        List<ec.edu.viajecito.model.Amortizacion> amortizacions = new ArrayList<>();
+        ArrayOfAmortizacion arrayOfAmortizacion = AeroCondorClient.obtenerAmortizacionPorFactura(idFactura);                
+        
+        for (Amortizacion amortizacion : arrayOfAmortizacion.getAmortizacion()) {
+            ec.edu.viajecito.model.Amortizacion modelAmortizacion = new ec.edu.viajecito.model.Amortizacion();
+            modelAmortizacion.setCapitalPagado(amortizacion.getCapitalPagado().doubleValue());
+            modelAmortizacion.setIdAmortizacion(amortizacion.getIdAmortizacion());
+            modelAmortizacion.setIdFactura(amortizacion.getIdFactura());
+            modelAmortizacion.setInteresPagado(amortizacion.getInteresPagado().doubleValue());
+            modelAmortizacion.setSaldo(amortizacion.getSaldo().doubleValue());
+            modelAmortizacion.setValorCuota(amortizacion.getValorCuota().doubleValue());
+            modelAmortizacion.setNumeroCuota(amortizacion.getNumeroCuota());
+            
+            amortizacions.add(modelAmortizacion);
+        }
+                
+        return amortizacions;                        
     }
 }

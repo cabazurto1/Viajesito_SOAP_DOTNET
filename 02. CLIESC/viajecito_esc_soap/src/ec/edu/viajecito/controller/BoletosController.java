@@ -96,6 +96,9 @@ public class BoletosController {
 
         // Asignar el ID del usuario
         compraBoletoRequest1.setIdUsuario(compraBoletoRequest.getIdUsuario());
+        compraBoletoRequest1.setNumeroCuotas(compraBoletoRequest.getNumeroCuotas());
+        compraBoletoRequest1.setEsCredito(compraBoletoRequest.getEsCredito());
+        compraBoletoRequest1.setTasaInteresAnual(compraBoletoRequest.getTasaInteresAnual());        
 
         // Crear lista de VueloCompra SOAP
         List<ec.edu.viajecito.client.VueloCompra> vuelosSoap = new ArrayList<>();

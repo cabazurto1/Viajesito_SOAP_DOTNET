@@ -83,5 +83,12 @@ public class AeroCondorClient {
         ec.edu.viajecito.client.IAeroCondorController port = service.getBasicHttpBindingIAeroCondorController();
         return port.getFacturasPorUsuario(idUsuario);
     }        
+
+    public static ArrayOfAmortizacion obtenerAmortizacionPorFactura(java.lang.Integer idFactura) {
+        ec.edu.viajecito.client.AeroCondorController service = new ec.edu.viajecito.client.AeroCondorController();
+        ec.edu.viajecito.client.IAeroCondorController port = service.getBasicHttpBindingIAeroCondorController();
+        return port.obtenerAmortizacionPorFactura(idFactura);
+    }
+    
     
 }

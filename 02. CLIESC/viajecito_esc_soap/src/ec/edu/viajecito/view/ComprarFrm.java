@@ -7,6 +7,7 @@ package ec.edu.viajecito.view;
 import ec.edu.viajecito.controller.BoletosController;
 import ec.edu.viajecito.controller.CiudadesController;
 import ec.edu.viajecito.controller.VuelosController;
+import ec.edu.viajecito.model.Amortizacion;
 import ec.edu.viajecito.model.Ciudad;
 import ec.edu.viajecito.model.CompraBoletoRequest;
 import ec.edu.viajecito.model.Usuario;
@@ -57,6 +58,7 @@ public class ComprarFrm extends javax.swing.JFrame {
         SpinnerNumberModel model1 = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1);
         spnNumBoletos.setModel(model1);
         cargarCiudadesEnCombo();
+        cargarCombos();
         
         this.usuario = usuario1;
         vuelos = new ArrayList<>();
@@ -151,6 +153,48 @@ public class ComprarFrm extends javax.swing.JFrame {
             cmbDestino.addItem(c.getCodigoCiudad() + " - " + c.getNombreCiudad());
         }
     }
+    
+    private void cargarCombos() {
+        cmbTipoPago.removeAllItems();
+        cmbCuotas.removeAllItems();
+        
+        cmbTipoPago.addItem("Contado");
+        cmbTipoPago.addItem("Diferido");
+        
+        cmbCuotas.addItem("3 meses");
+        cmbCuotas.addItem("6 meses");
+        cmbCuotas.addItem("12 meses");
+        cmbCuotas.addItem("15 meses");
+    }
+    
+    public boolean esPagoDiferido() {
+        String seleccionado = (String) cmbTipoPago.getSelectedItem();
+        return !"Contado".equals(seleccionado);
+    }
+    
+    public int obtenerMesesCuota() {
+        String seleccionado = (String) cmbCuotas.getSelectedItem(); // e.g. "6 meses"
+        // Separa por espacio y convierte la primera parte a entero
+        
+        if(!esPagoDiferido()) {
+            return 0;
+        }
+        
+        try {
+            String partes[] = seleccionado.split("\\s+");
+            return Integer.parseInt(partes[0]);
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException ex) {
+            // En caso de dato inesperado, devolvemos 0 o lanzamos excepción según prefieras
+            return 0;
+        }
+    }
+    
+    public double obtenerInteres() {
+        if(!esPagoDiferido()) {
+            return 0;
+        }
+        return 16.5;
+    }
 
 
     /**
@@ -184,6 +228,10 @@ public class ComprarFrm extends javax.swing.JFrame {
         btnDelete = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         tblVuelos = new javax.swing.JTable();
+        cmbTipoPago = new javax.swing.JComboBox<>();
+        jLabel10 = new javax.swing.JLabel();
+        jLabel11 = new javax.swing.JLabel();
+        cmbCuotas = new javax.swing.JComboBox<>();
 
         dialogConfirm.setFont(new java.awt.Font("Maiandra GD", 0, 18)); // NOI18N
 
@@ -363,6 +411,29 @@ public class ComprarFrm extends javax.swing.JFrame {
         });
         jScrollPane1.setViewportView(tblVuelos);
 
+        cmbTipoPago.setBackground(new java.awt.Color(255, 255, 255));
+        cmbTipoPago.setFont(new java.awt.Font("Maiandra GD", 0, 18)); // NOI18N
+        cmbTipoPago.setForeground(new java.awt.Color(60, 59, 46));
+        cmbTipoPago.addItemListener(new java.awt.event.ItemListener() {
+            public void itemStateChanged(java.awt.event.ItemEvent evt) {
+                cmbTipoPagoItemStateChanged(evt);
+            }
+        });
+
+        jLabel10.setBackground(new java.awt.Color(60, 59, 46));
+        jLabel10.setFont(new java.awt.Font("Maiandra GD", 1, 24)); // NOI18N
+        jLabel10.setForeground(new java.awt.Color(27, 55, 58));
+        jLabel10.setText("Tipo de Pago");
+
+        jLabel11.setBackground(new java.awt.Color(60, 59, 46));
+        jLabel11.setFont(new java.awt.Font("Maiandra GD", 1, 24)); // NOI18N
+        jLabel11.setForeground(new java.awt.Color(27, 55, 58));
+        jLabel11.setText("Cuotas");
+
+        cmbCuotas.setBackground(new java.awt.Color(255, 255, 255));
+        cmbCuotas.setFont(new java.awt.Font("Maiandra GD", 0, 18)); // NOI18N
+        cmbCuotas.setForeground(new java.awt.Color(60, 59, 46));
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -394,9 +465,9 @@ public class ComprarFrm extends javax.swing.JFrame {
                                             .addComponent(cmbOrigen, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE)
                                             .addComponent(jLabel2))
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 40, Short.MAX_VALUE)
-                                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                            .addComponent(jLabel9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                            .addComponent(cmbDestino, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                            .addComponent(jLabel9, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                            .addComponent(cmbDestino, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE)))
                                     .addComponent(cmbVuelos, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                     .addGroup(jPanel1Layout.createSequentialGroup()
                                         .addComponent(jLabel6)
@@ -412,7 +483,18 @@ public class ComprarFrm extends javax.swing.JFrame {
                                 .addComponent(btnAdd)
                                 .addGap(18, 18, 18)
                                 .addComponent(btnDelete))
-                            .addComponent(jScrollPane1))))
+                            .addComponent(jScrollPane1)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addGroup(jPanel1Layout.createSequentialGroup()
+                                        .addComponent(cmbTipoPago, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addGap(18, 18, 18)
+                                        .addComponent(cmbCuotas, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addGroup(jPanel1Layout.createSequentialGroup()
+                                        .addComponent(jLabel10, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addGap(18, 18, 18)
+                                        .addComponent(jLabel11, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addGap(0, 0, Short.MAX_VALUE)))))
                 .addGap(58, 58, 58))
         );
         jPanel1Layout.setVerticalGroup(
@@ -429,9 +511,9 @@ public class ComprarFrm extends javax.swing.JFrame {
                     .addComponent(jLabel4))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(cmbDestino, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(cmbOrigen, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(spinDate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(spinDate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(cmbDestino, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
                 .addComponent(jLabel2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -449,7 +531,15 @@ public class ComprarFrm extends javax.swing.JFrame {
                 .addComponent(lblViajesMsg)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 104, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(141, 141, 141)
+                .addGap(18, 18, 18)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel10)
+                    .addComponent(jLabel11))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(cmbCuotas, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(cmbTipoPago, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(54, 54, 54)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(btnComprar, javax.swing.GroupLayout.DEFAULT_SIZE, 56, Short.MAX_VALUE)
                     .addComponent(btnSalir1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
@@ -503,12 +593,30 @@ public class ComprarFrm extends javax.swing.JFrame {
                    .append(" | Cantidad: ").append(vc.getCantidad())
                    .append(" | Total: ").append(precioParcial).append(" $\n");
         }
+                
+        String txtCuotas = "";
+        double totalIva = total * 1.15;
+        if (esPagoDiferido()) {
+            List<Amortizacion> amortizacions = Amortizacion.calcularAmortizacion(totalIva, obtenerMesesCuota(), obtenerInteres());
+            totalIva = obtenerMesesCuota() * amortizacions.get(0).getValorCuota();
+            double totalInteres = 0;
+            for(Amortizacion amortizacion : amortizacions) {
+                totalInteres += amortizacion.getInteresPagado();
+            }            
+            
+            txtCuotas = "Cuotas: " + (String) cmbCuotas.getSelectedItem() + "\n" +
+                    "Cuotas Mensuales: " + String.format("%.2f", amortizacions.get(0).getValorCuota()) + "$\n" + 
+                    "Total interes: " + String.format("%.2f", totalInteres) + "$\n";
+            
+        }
 
         int opcion = JOptionPane.showOptionDialog(
             this,
             "¿Está seguro que desea realizar la compra?\n" +
             "Vuelos a comprar:\n" + resumen.toString() +
-            "TOTAL: " + total + "$",
+            "Tipo de Pago: " + (String) cmbTipoPago.getSelectedItem() + "\n" +
+            txtCuotas +
+            "TOTAL (Inc Iva): " + String.format("%.2f", totalIva) + "$",
             "Confirmar compra",
             JOptionPane.YES_NO_OPTION,
             JOptionPane.QUESTION_MESSAGE,
@@ -521,6 +629,9 @@ public class ComprarFrm extends javax.swing.JFrame {
             CompraBoletoRequest req = new CompraBoletoRequest();
             req.setIdUsuario(usuario.getIdUsuario());
             req.setVuelos(vuelosComprar);
+            req.setEsCredito(esPagoDiferido());
+            req.setNumeroCuotas(obtenerMesesCuota());
+            req.setTasaInteresAnual(obtenerInteres());
 
             boolean ok = new BoletosController().comprarBoletos(req);
 
@@ -609,6 +720,14 @@ public class ComprarFrm extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_tblVuelosMouseClicked
 
+    private void cmbTipoPagoItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cmbTipoPagoItemStateChanged
+        if (!esPagoDiferido()) {
+            cmbCuotas.setEnabled(false); // Deshabilitar si es contado
+        } else {
+            cmbCuotas.setEnabled(true);  // Habilitar si es diferido
+        }
+    }//GEN-LAST:event_cmbTipoPagoItemStateChanged
+
     /**
      * @param args the command line arguments
      */
@@ -653,10 +772,14 @@ public class ComprarFrm extends javax.swing.JFrame {
     private javax.swing.JButton btnComprar;
     private javax.swing.JButton btnDelete;
     private javax.swing.JButton btnSalir1;
+    private javax.swing.JComboBox<String> cmbCuotas;
     private javax.swing.JComboBox<String> cmbDestino;
     private javax.swing.JComboBox<String> cmbOrigen;
+    private javax.swing.JComboBox<String> cmbTipoPago;
     private javax.swing.JComboBox<String> cmbVuelos;
     private javax.swing.JDialog dialogConfirm;
+    private javax.swing.JLabel jLabel10;
+    private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
