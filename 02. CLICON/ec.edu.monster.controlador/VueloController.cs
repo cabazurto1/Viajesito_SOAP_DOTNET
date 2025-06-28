@@ -45,5 +45,11 @@ namespace ec.edu.monster.controlador
             var result = await _cliente.BuscarVuelosAsync(origen, destino, fecha);
             return new List<Vuelos>(result);
         }
+
+        public async Task<List<Amortizacion>> ObtenerAmortizacionPorFactura(int facturaId)
+        {
+            var result = await _cliente.ObtenerAmortizacionPorFacturaAsync(facturaId);
+            return new List<Amortizacion>(result);
+        }
     }
 }

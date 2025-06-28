@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using ec.edu.monster.modelo;
-using ec.edu.monster.servicio;
+using ec.edu.monster.controlador;
 
 namespace ec.edu.monster.prueba
 {

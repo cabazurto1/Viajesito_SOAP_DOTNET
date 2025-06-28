@@ -76,7 +76,6 @@ namespace ec.edu.monster.vista
 
             foreach (var boleto in factura.BoletosRelacionados)
             {
-                // Suponiendo que tienes acceso a los datos del vuelo:
                 Vuelos vuelo = await vuelosController.ObtenerPorIdAsync(boleto.IdVuelo);
 
                 string ciudadOrigen = ObtenerNombreCiudad(vuelo.IdCiudadOrigen);
@@ -95,9 +94,54 @@ namespace ec.edu.monster.vista
 
             Console.WriteLine("\n{0,-20} ${1}", "subtotal", subtotal.ToString("F2"));
             Console.WriteLine("{0,-20} ${1}", "descuento", "0");
-            Console.WriteLine("{0,-20} ${1}", "subtotal con IVA 15%", iva.ToString("F2"));
+            Console.WriteLine("{0,-20} ${1}", "IVA 15%", iva.ToString("F2"));
             Console.WriteLine("{0,-20} ${1}", "total", total.ToString("F2"));
+
+            // Verificar si tiene tabla de amortización
+            var amortizaciones = await new VueloController().ObtenerAmortizacionPorFactura(factura.IdFactura);
+
+            if (amortizaciones.Any())
+            {
+                Console.WriteLine("\nEsta factura fue pagada a crédito (diferido).");
+
+                while (true)
+                {
+                    Console.WriteLine("\n1. Ver tabla de amortización");
+                    Console.WriteLine("2. Salir");
+                    Console.Write("Seleccione una opción: ");
+                    var opcion = Console.ReadLine();
+
+                    if (opcion == "1")
+                    {
+                        MostrarTablaAmortizacion(amortizaciones);
+                    }
+                    else if (opcion == "2")
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Opción inválida.");
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("\nEsta factura fue pagada al contado.");
+            }
         }
+
+        private static void MostrarTablaAmortizacion(List<Amortizacion> tabla)
+        {
+            Console.WriteLine("\n===== TABLA DE AMORTIZACIÓN =====");
+            Console.WriteLine("Cuota | Valor Cuota | Interés | Capital | Saldo");
+            foreach (var a in tabla)
+            {
+                Console.WriteLine($"{a.NumeroCuota,5} | {a.ValorCuota,12:C2} | {a.InteresPagado,8:C2} | {a.CapitalPagado,8:C2} | {a.Saldo,8:C2}");
+            }
+        }
+
+
 
         private static string ObtenerNombreCiudad(int idCiudad)
         {

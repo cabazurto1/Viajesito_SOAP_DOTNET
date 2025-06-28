@@ -28,7 +28,6 @@ namespace ec.edu.monster.vista
             {
                 int origenIdx = PedirIndiceCiudad("origen", ciudades, -1);
                 int destinoIdx = PedirIndiceCiudad("destino", ciudades, origenIdx);
-
                 DateTime fechaSalida = PedirFechaSalida();
 
                 var ciudadOrigen = ciudades[origenIdx];
@@ -61,11 +60,33 @@ namespace ec.edu.monster.vista
 
                 listaVuelos.Add(vueloCompra);
 
-                Console.WriteLine($"Subtotal actual: ${total}");
+                Console.WriteLine($"Subtotal actual (sin IVA): ${total}");
 
             } while (Confirmar("¿Desea agregar otro vuelo a la compra? (s/n): "));
 
-            Console.WriteLine($"Total a pagar por todos los vuelos: ${total}");
+            total = new Decimal(((double)total) * 1.15);
+
+            Console.WriteLine($"Total actual (con IVA): ${total}");
+
+            // Elegir tipo de pago
+            bool esCredito = Confirmar("¿Desea pagar a crédito? (s/n): ");
+            int cuotas = 1;
+            double tasaInteres = 16.5;
+
+            if (esCredito)
+            {
+                cuotas = PedirEntero("Ingrese el número de cuotas mensuales (2 o más): ", 2);
+                var resumen = CalcularAmortizacion((double)total, tasaInteres, cuotas);
+                MostrarResumenCredito((double)total, resumen, cuotas);
+                total = new Decimal(cuotas * resumen);
+                if (!Confirmar("¿Desea continuar con esta forma de pago? (s/n): "))
+                {
+                    Console.WriteLine("Compra cancelada.");
+                    return;
+                }
+            }
+
+            Console.WriteLine($"Total a pagar: ${total}");
 
             if (!Confirmar("¿Confirmar compra total? (s/n): "))
             {
@@ -76,12 +97,81 @@ namespace ec.edu.monster.vista
             var request = new CompraBoletoRequest
             {
                 IdUsuario = usuario.IdUsuario,
-                Vuelos = listaVuelos.ToArray()
+                Vuelos = listaVuelos.ToArray(),
+                EsCredito = esCredito,
+                NumeroCuotas = cuotas,
+                TasaInteresAnual = tasaInteres,
             };
 
             var result = await client.ComprarAsync(request);
             Console.WriteLine(result ? "Compra realizada con éxito." : "Error en la compra.");
         }
+
+        private static int PedirEntero(string mensaje, int minimo)
+        {
+            int valor;
+            do
+            {
+                Console.Write(mensaje);
+            } while (!int.TryParse(Console.ReadLine(), out valor) || valor < minimo);
+            return valor;
+        }
+
+        private static double CalcularAmortizacion(double monto, double tasaAnual, int cuotas)
+        {
+            double tasaMensual = tasaAnual / 12 / 100;
+            double cuotaMensual = monto * tasaMensual / (1 - Math.Pow(1 + tasaMensual, -cuotas));
+            return cuotaMensual;
+        }
+
+        private static List<Amortizacion> CalcularTablaAmortizacion(double monto, double tasaAnual, int cuotas)
+        {
+            decimal saldoPendiente = (decimal)monto;
+            decimal tasaMensual = (decimal)(tasaAnual / 12.0 / 100.0);
+
+            // Fórmula de cuota fija (método francés)
+            decimal cuota = saldoPendiente * tasaMensual /
+                (1 - (decimal)Math.Pow(1 + (double)tasaMensual, -cuotas));
+
+            var tabla = new List<Amortizacion>();
+
+            for (int i = 1; i <= cuotas; i++)
+            {
+                decimal interes = saldoPendiente * tasaMensual;
+                decimal capital = cuota - interes;
+                saldoPendiente -= capital;
+
+                tabla.Add(new Amortizacion
+                {
+                    IdAmortizacion = 0, // Se asignará luego al guardar
+                    IdFactura = 0,      // Se asignará luego al guardar
+                    NumeroCuota = i,
+                    ValorCuota = Math.Round(cuota, 2),
+                    InteresPagado = Math.Round(interes, 2),
+                    CapitalPagado = Math.Round(capital, 2),
+                    Saldo = Math.Round(saldoPendiente < 0 ? 0 : saldoPendiente, 2)
+                });
+            }
+
+            return tabla;
+        }
+
+
+        private static void MostrarResumenCredito(double monto, double cuota, int cuotas)
+        {
+            double totalPagar = cuota * cuotas;
+            double interesTotal = totalPagar - monto;
+
+            Console.WriteLine($"\n===== RESUMEN DE CRÉDITO =====");
+            Console.WriteLine($"Monto original: ${monto:F2}");
+            Console.WriteLine($"Cuotas: {cuotas}");
+            Console.WriteLine($"Cuota mensual: ${cuota:F2}");
+            Console.WriteLine($"Total a pagar: ${totalPagar:F2}");
+            Console.WriteLine($"Interés total: ${interesTotal:F2}");
+        }
+
+
+
 
 
         private static int PedirIndiceCiudad(string tipo, Ciudades[] ciudades, int excluir)

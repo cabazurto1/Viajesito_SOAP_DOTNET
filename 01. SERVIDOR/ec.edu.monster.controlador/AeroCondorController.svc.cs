@@ -5,7 +5,7 @@ using ec.edu.monster.controlador;
 using ec.edu.monster.db;
 using ec.edu.monster.modelo;
 
-namespace ec.edu.monster.servicio
+namespace ec.edu.monster.controlador
 {
     public class AeroCondorController : IAeroCondorController
     {
