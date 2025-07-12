@@ -17,6 +17,8 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -702,6 +704,19 @@ public class ComprarFrm extends javax.swing.JFrame {
                 return;
             }
         }
+        
+        for (Vuelo vuelorow : vuelosAgregados) {
+            LocalDate fechaExistente = vuelorow.getHoraSalida().toInstant()
+                    .atZone(ZoneId.systemDefault()).toLocalDate();
+
+            LocalDate fechaNuevoVuelo = vuelo.getHoraSalida().toInstant()
+                    .atZone(ZoneId.systemDefault()).toLocalDate();
+
+            if (fechaExistente.equals(fechaNuevoVuelo)) {
+                JOptionPane.showMessageDialog(this, "No se puede añadir otro vuelo el mismo día. Elija una fecha diferente.");
+                return;
+            }
+        }
 
         // Agregar a lista y tabla
         vuelosComprar.add(new VueloCompra(vuelo.getIdVuelo(), cantidad));
@@ -753,6 +768,10 @@ public class ComprarFrm extends javax.swing.JFrame {
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(ComprarFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
         //</editor-fold>
         //</editor-fold>
         //</editor-fold>

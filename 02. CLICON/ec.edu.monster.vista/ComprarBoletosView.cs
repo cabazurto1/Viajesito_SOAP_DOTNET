@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using ServiceReference1;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ec.edu.monster.vista
 {
@@ -23,6 +24,7 @@ namespace ec.edu.monster.vista
 
             var listaVuelos = new List<ServiceReference1.VueloCompra>();
             decimal total = 0;
+            var vuelosAgregados = new List<ServiceReference1.Vuelos>();
 
             do
             {
@@ -48,6 +50,32 @@ namespace ec.edu.monster.vista
                 int vueloIdx = PedirIndiceVuelo(vuelos);
                 var vuelo = vuelos[vueloIdx];
 
+                bool vueloYaAgregado = false;
+
+                DateTime fechaNuevoVuelo = vuelo.HoraSalida.Date;
+
+                foreach (var vuelorow in vuelosAgregados)
+                {
+                    DateTime fechaExistente = vuelorow.HoraSalida.Date;
+
+                    Console.WriteLine("Hora salida vuelo nuevo" + fechaNuevoVuelo);
+                    Console.WriteLine("Hora salida vuelo fechaExistente" + fechaExistente);
+
+                    if (fechaExistente == fechaNuevoVuelo)
+                    {
+                        Console.WriteLine("No se puede agregar otro vuelo en la misma fecha.");
+                        vueloYaAgregado = true;
+                        break;
+                    }
+                }
+
+                if (vueloYaAgregado)
+                {
+                    continue; // Salta a la siguiente iteración del do-while
+                }
+
+
+
                 int cantidad = PedirCantidadBoletos(vuelo);
 
                 total += vuelo.Valor * cantidad;
@@ -58,7 +86,9 @@ namespace ec.edu.monster.vista
                     Cantidad = cantidad
                 };
 
+                vuelosAgregados.Add(vuelo);
                 listaVuelos.Add(vueloCompra);
+
 
                 Console.WriteLine($"Subtotal actual (sin IVA): ${total}");
 
