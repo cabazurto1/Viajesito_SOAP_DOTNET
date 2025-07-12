@@ -37,6 +37,7 @@ export default function Layout() {
       <Drawer.Screen name="views/MisBoletosView" options={{ title: 'Mis Boletos' }} />
       <Drawer.Screen name="views/VuelosDisponiblesView" options={{ title: 'Vuelos Disponibles' }} />
       <Drawer.Screen name="views/ComprarBoletoView" options={{ title: 'Comprar Boletos' }} />
+      <Drawer.Screen name="views/FacturasView" options={{ title: 'Mis Facturas' }} />
     </Drawer>
   );
 }

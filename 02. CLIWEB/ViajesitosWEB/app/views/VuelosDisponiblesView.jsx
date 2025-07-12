@@ -45,64 +45,27 @@ export default function VuelosDisponiblesView() {
   useEffect(() => {
     const cargarVuelosConCiudades = async () => {
       try {
-        const [ciudades, vuelosRaw] = await Promise.all([
-          obtenerCiudades(),
-          obtenerVuelos(),
-        ]);
+        const vuelosRaw = await obtenerVuelos();
 
         // DEBUG: Ver qué datos estamos recibiendo
-        console.log('🏙️ Ciudades recibidas:', ciudades);
         console.log('✈️ Vuelos recibidos:', vuelosRaw);
 
-        // Crear mapa de ciudades - probamos diferentes posibles nombres de campos
-        const mapa = {};
-        ciudades.forEach((c) => {
-          console.log('🔍 Procesando ciudad:', c);
-          // Probamos diferentes posibles nombres de campos
-          const id = c.idCiudad || c.IdCiudad || c.id || c.Id;
-          const nombre = c.nombreCiudad || c.NombreCiudad || c.nombre || c.Nombre;
-          if (id && nombre) {
-            mapa[id] = nombre;
-          }
-        });
-
-        console.log('🗺️ Mapa de ciudades creado:', mapa);
-
-        // Mapear vuelos con nombres de ciudades
-        // TEMPORAL: Usar IDs hardcodeados hasta que se corrija VueloController
-        const vuelosCompletos = vuelosRaw.map((v, index) => {
-          console.log('🛩️ Procesando vuelo completo:', v);
-          console.log('🔍 Claves del vuelo:', Object.keys(v));
+        // Los vuelos ya vienen con los objetos de ciudad completos
+        // No necesitamos hacer una llamada adicional a obtenerCiudades
+        const vuelosCompletos = vuelosRaw.map((v) => {
+          console.log('🛩️ Procesando vuelo:', v);
           
-          // Probamos diferentes posibles nombres de campos para ciudades
-          let idOrigen = v.IdCiudadOrigen || v.idCiudadOrigen || v.origen || v.Origen || v.ciudadOrigen || v.CiudadOrigen;
-          let idDestino = v.IdCiudadDestino || v.idCiudadDestino || v.destino || v.Destino || v.ciudadDestino || v.CiudadDestino;
+          // Extraer los nombres de las ciudades de los objetos anidados
+          const ciudadOrigen = v.CiudadOrigen || {};
+          const ciudadDestino = v.CiudadDestino || {};
           
-          // TEMPORAL: Si no encuentra los campos, usar valores de ejemplo basados en el XML que mostraste
-          if (!idOrigen && !idDestino) {
-            const ejemploRutas = [
-              {origen: 1, destino: 2}, // Quito -> Guayaquil
-              {origen: 2, destino: 1}, // Guayaquil -> Quito  
-              {origen: 1, destino: 3}, // Quito -> Cuenca
-              {origen: 3, destino: 1}, // Cuenca -> Quito
-              {origen: 2, destino: 3}, // Guayaquil -> Cuenca
-              {origen: 3, destino: 2}, // Cuenca -> Guayaquil
-              {origen: 1, destino: 4}, // Quito -> Miami
-              {origen: 4, destino: 1}, // Miami -> Quito
-            ];
-            const ruta = ejemploRutas[index % ejemploRutas.length];
-            idOrigen = ruta.origen;
-            idDestino = ruta.destino;
-            console.log('⚠️ USANDO IDs TEMPORALES - Origen:', idOrigen, 'Destino:', idDestino);
-          }
-          
-          console.log('🔗 ID Origen encontrado:', idOrigen, '-> Ciudad:', mapa[idOrigen]);
-          console.log('🔗 ID Destino encontrado:', idDestino, '-> Ciudad:', mapa[idDestino]);
+          console.log('🏙️ Ciudad Origen:', ciudadOrigen);
+          console.log('🏙️ Ciudad Destino:', ciudadDestino);
           
           return {
             ...v,
-            nombreCiudadOrigen: mapa[idOrigen] || 'Ciudad no encontrada',
-            nombreCiudadDestino: mapa[idDestino] || 'Ciudad no encontrada',
+            nombreCiudadOrigen: ciudadOrigen.nombre || 'Ciudad no encontrada',
+            nombreCiudadDestino: ciudadDestino.nombre || 'Ciudad no encontrada',
           };
         });
 
@@ -112,7 +75,7 @@ export default function VuelosDisponiblesView() {
 
         setVuelos(ordenados);
       } catch (err) {
-        console.error('❌ Error al cargar vuelos con ciudades:', err);
+        console.error('❌ Error al cargar vuelos:', err);
         setVuelos([]);
       } finally {
         setLoading(false);
@@ -129,7 +92,7 @@ export default function VuelosDisponiblesView() {
       <View style={styles.card}>
         <Text style={styles.title}>✈️ {item.CodigoVuelo}</Text>
         <Text>Ruta: {item.nombreCiudadOrigen} ➡ {item.nombreCiudadDestino}</Text>
-        <Text>Hora salida: {item.HoraSalida}</Text>
+        <Text>Hora salida: {new Date(item.HoraSalida).toLocaleString()}</Text>
         <Text>Precio: ${item.Valor}</Text>
         <Text>Capacidad: {item.Capacidad}</Text>
         <Text>Disponibles: {item.Disponibles}</Text>
@@ -151,7 +114,7 @@ export default function VuelosDisponiblesView() {
         <View key={i} style={styles.fila}>
           <Text style={styles.col}>{v.CodigoVuelo}</Text>
           <Text style={styles.col}>{v.nombreCiudadOrigen} ➡ {v.nombreCiudadDestino}</Text>
-          <Text style={styles.col}>{v.HoraSalida}</Text>
+          <Text style={styles.col}>{new Date(v.HoraSalida).toLocaleString()}</Text>
           <Text style={styles.col}>${v.Valor}</Text>
           <Text style={styles.col}>{v.Capacidad}</Text>
           <Text style={styles.col}>{v.Disponibles}</Text>

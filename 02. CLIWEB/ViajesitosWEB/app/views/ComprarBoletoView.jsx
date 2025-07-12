@@ -30,6 +30,8 @@ export default function ComprarBoletoView() {
   const isMobile = width < 768;
   const isTablet = width >= 768 && width < 1024;
   const isDesktop = width >= 1024;
+  // Configuración de restricciones
+  const RESTRICCION_MISMO_DIA = true; // Activar/desactivar restricción de vuelos el mismo día
 
   const [usuario, setUsuario] = useState(null);
   const [ciudades, setCiudades] = useState([]);
@@ -159,6 +161,13 @@ function calcularAmortizacion(monto, cuotas, tasaAnual = 16.5) {
     const ciudad = ciudades.find(c => c.codigoCiudad === codigo);
     return ciudad ? ciudad.nombreCiudad : codigo;
   };
+  // Función para formatear fecha de manera amigable
+const formatearFecha = (fechaISO) => {
+  const [año, mes, dia] = fechaISO.split('-');
+  const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  return `${parseInt(dia)} de ${meses[parseInt(mes) - 1]} de ${año}`;
+};
 
   // Agregar vuelo al carrito
 // Funciones del carrito mejoradas con validaciones
@@ -173,6 +182,26 @@ const agregarAlCarrito = (vuelo, cantidad) => {
       `Por favor ingrese una cantidad válida (1-${maxPermitido})`
     );
     return;
+  }
+
+  // Extraer fecha del vuelo actual (sin hora)
+  const fechaVueloActual = vuelo.HoraSalida.split('T')[0];
+  
+  // Verificar si ya hay vuelos del mismo día en el carrito
+  if (RESTRICCION_MISMO_DIA) {
+    const vueloMismoDia = carrito.find(item => {
+      const fechaItemCarrito = item.vuelo.HoraSalida.split('T')[0];
+      return fechaItemCarrito === fechaVueloActual && item.idVuelo !== vuelo.IdVuelo;
+    });
+    
+    if (vueloMismoDia) {
+      Alert.alert(
+        '⚠️ Restricción de fecha',
+        `No se pueden comprar múltiples vuelos en el mismo día.\n\nYa tienes un vuelo programado para el ${formatearFecha(fechaVueloActual)}:\n✈️ ${vueloMismoDia.vuelo.CodigoVuelo} (${getNombreCiudad(vueloMismoDia.vuelo.origen)} → ${getNombreCiudad(vueloMismoDia.vuelo.destino)})`,
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return;
+    }
   }
 
   const vueloEnCarrito = carrito.find(item => item.idVuelo === vuelo.IdVuelo);
@@ -431,7 +460,14 @@ const limpiarItemCarrito = (idVuelo) => {
 // Componente VueloItem mejorado con stepper y validaciones
 const VueloItem = ({ vuelo }) => {
   const [cantidad, setCantidad] = useState(1);
-  const maxBoletos = Math.min(vuelo.Disponibles, 20); // Máximo 20 o disponibles
+  const maxBoletos = Math.min(vuelo.Disponibles, 20);
+  
+  // Verificar si hay restricción por fecha
+  const fechaVueloActual = vuelo.HoraSalida.split('T')[0];
+  const tieneRestriccionFecha = RESTRICCION_MISMO_DIA && carrito.some(item => {
+    const fechaItemCarrito = item.vuelo.HoraSalida.split('T')[0];
+    return fechaItemCarrito === fechaVueloActual && item.idVuelo !== vuelo.IdVuelo;
+  });
   
   const incrementarCantidad = () => {
     if (cantidad < maxBoletos) {
@@ -446,13 +482,27 @@ const VueloItem = ({ vuelo }) => {
   };
   
   const manejarAgregar = () => {
+    if (tieneRestriccionFecha) {
+      const vueloConflicto = carrito.find(item => {
+        const fechaItemCarrito = item.vuelo.HoraSalida.split('T')[0];
+        return fechaItemCarrito === fechaVueloActual && item.idVuelo !== vuelo.IdVuelo;
+      });
+      
+      Alert.alert(
+        '⚠️ Restricción de fecha',
+        `No se pueden comprar múltiples vuelos en el mismo día.\n\nYa tienes un vuelo programado para el ${formatearFecha(fechaVueloActual)}:\n✈️ ${vueloConflicto.vuelo.CodigoVuelo} (${getNombreCiudad(vueloConflicto.vuelo.origen)} → ${getNombreCiudad(vueloConflicto.vuelo.destino)})`,
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return;
+    }
+    
     if (cantidad <= 0 || cantidad > maxBoletos) {
       Alert.alert('Error', `Cantidad inválida. Máximo permitido: ${maxBoletos}`);
       return;
     }
     
     agregarAlCarrito(vuelo, cantidad);
-    setCantidad(1); // Resetear después de agregar
+    setCantidad(1);
   };
 
   const fechaVuelo = vuelo.HoraSalida.split('T')[0];
@@ -462,7 +512,8 @@ const VueloItem = ({ vuelo }) => {
     <View style={[
       styles.card,
       isTablet && styles.cardTablet,
-      isDesktop && styles.cardDesktop
+      isDesktop && styles.cardDesktop,
+      tieneRestriccionFecha && styles.cardRestricted
     ]}>
       <Text style={[
         styles.title,
@@ -522,50 +573,59 @@ const VueloItem = ({ vuelo }) => {
         </View>
       </View>
 
-      {/* Información de disponibilidad */}
       <View style={styles.disponibilidadInfo}>
         <Text style={styles.disponibilidadText}>
           Máximo por compra: {maxBoletos} boleto{maxBoletos !== 1 ? 's' : ''}
         </Text>
       </View>
 
-      {/* Sistema de stepper mejorado */}
-      <View style={styles.stepperContainer}>
-        <Text style={[
-          styles.stepperLabel,
-          isDesktop && { fontSize: 18 }
-        ]}>Cantidad:</Text>
-        
-        <TouchableOpacity
-          style={[
-            styles.stepperBtn,
-            cantidad <= 1 && styles.stepperBtnDisabled
-          ]}
-          onPress={decrementarCantidad}
-          disabled={cantidad <= 1}
-        >
-          <Text style={styles.stepperText}>−</Text>
-        </TouchableOpacity>
-        
-        <Text style={[
-          styles.stepperCount,
-          isDesktop && { fontSize: 20, minWidth: 80 }
-        ]}>{cantidad}</Text>
-        
-        <TouchableOpacity
-          style={[
-            styles.stepperBtn,
-            cantidad >= maxBoletos && styles.stepperBtnDisabled
-          ]}
-          onPress={incrementarCantidad}
-          disabled={cantidad >= maxBoletos}
-        >
-          <Text style={styles.stepperText}>+</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Mostrar restricción de fecha si existe */}
+      {tieneRestriccionFecha && (
+        <View style={styles.restriccionFecha}>
+          <Text style={styles.restriccionFechaText}>
+            ⚠️ Ya tienes un vuelo programado para esta fecha
+          </Text>
+        </View>
+      )}
 
-      {/* Indicador de límite si aplica */}
-      {maxBoletos < vuelo.Disponibles && (
+      {/* Sistema de stepper mejorado - SOLO si no hay restricción */}
+      {!tieneRestriccionFecha && (
+        <View style={styles.stepperContainer}>
+          <Text style={[
+            styles.stepperLabel,
+            isDesktop && { fontSize: 18 }
+          ]}>Cantidad:</Text>
+          
+          <TouchableOpacity
+            style={[
+              styles.stepperBtn,
+              cantidad <= 1 && styles.stepperBtnDisabled
+            ]}
+            onPress={decrementarCantidad}
+            disabled={cantidad <= 1}
+          >
+            <Text style={styles.stepperText}>−</Text>
+          </TouchableOpacity>
+          
+          <Text style={[
+            styles.stepperCount,
+            isDesktop && { fontSize: 20, minWidth: 80 }
+          ]}>{cantidad}</Text>
+          
+          <TouchableOpacity
+            style={[
+              styles.stepperBtn,
+              cantidad >= maxBoletos && styles.stepperBtnDisabled
+            ]}
+            onPress={incrementarCantidad}
+            disabled={cantidad >= maxBoletos}
+          >
+            <Text style={styles.stepperText}>+</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {maxBoletos < vuelo.Disponibles && !tieneRestriccionFecha && (
         <View style={styles.limiteBoletos}>
           <Text style={styles.limiteBoletosText}>
             ⚠️ Límite de 20 boletos por compra
@@ -576,19 +636,24 @@ const VueloItem = ({ vuelo }) => {
       <TouchableOpacity 
         style={[
           styles.btnAgregar,
-          isDesktop && { paddingVertical: 18 }
+          isDesktop && { paddingVertical: 18 },
+          tieneRestriccionFecha && styles.btnAgregarDisabled
         ]} 
         onPress={manejarAgregar}
+        disabled={tieneRestriccionFecha}
       >
         <Text style={[
           styles.btnText,
           isDesktop && { fontSize: 18 }
-        ]}>🛒 Agregar {cantidad} boleto{cantidad !== 1 ? 's' : ''} al carrito</Text>
+        ]}>
+          {tieneRestriccionFecha 
+            ? '🚫 No disponible - Vuelo mismo día' 
+            : `🛒 Agregar ${cantidad} boleto${cantidad !== 1 ? 's' : ''} al carrito`}
+        </Text>
       </TouchableOpacity>
     </View>
   );
 };
-
 
   const renderFormSection = () => (
     <View style={[
@@ -671,34 +736,35 @@ const VueloItem = ({ vuelo }) => {
   );
 
   const renderVuelosList = () => {
-    if (isDesktop) {
-      // En desktop, mostrar en grid de 2 columnas
-      const rows = [];
-      for (let i = 0; i < vuelos.length; i += 2) {
-        const vuelosEnFila = vuelos.slice(i, i + 2);
-        rows.push(
-          <View key={`row-${i}`} style={styles.vueloRow}>
-            {vuelosEnFila.map((vuelo) => (
-              <VueloItem key={vuelo.IdVuelo} vuelo={vuelo} />
-            ))}
-            {vuelosEnFila.length === 1 && <View style={styles.cardDesktop} />}
-          </View>
-        );
-      }
-      return <View>{rows}</View>;
-    } else {
-      // En móvil y tablet, usar FlatList normal
-      return (
-        <FlatList
-          data={vuelos}
-          keyExtractor={(item) => `vuelo-${item.IdVuelo}`}
-          renderItem={({ item }) => <VueloItem vuelo={item} />}
-          contentContainerStyle={{ paddingBottom: 80 }}
-          showsVerticalScrollIndicator={false}
-        />
+  if (isDesktop) {
+    // En desktop, mostrar en grid de 2 columnas
+    const rows = [];
+    for (let i = 0; i < vuelos.length; i += 2) {
+      const vuelosEnFila = vuelos.slice(i, i + 2);
+      rows.push(
+        <View key={`row-${i}`} style={styles.vueloRow}>
+          {vuelosEnFila.map((vuelo) => (
+            <VueloItem key={vuelo.IdVuelo} vuelo={vuelo} />
+          ))}
+          {vuelosEnFila.length === 1 && <View style={styles.cardDesktop} />}
+        </View>
       );
     }
-  };
+    return <View>{rows}</View>;
+  } else {
+    // En móvil y tablet, usar FlatList normal
+    return (
+      <FlatList
+        data={vuelos}
+        keyExtractor={(item) => `vuelo-${item.IdVuelo}`}
+        renderItem={({ item }) => <VueloItem vuelo={item} />}
+        contentContainerStyle={{ paddingBottom: 80 }}
+        showsVerticalScrollIndicator={false}
+        extraData={carrito} // IMPORTANTE: Agregar esto para forzar re-renderizado cuando cambie el carrito
+      />
+    );
+  }
+};
 
   const totalCarrito = carrito.reduce((sum, item) => 
     sum + (parseFloat(item.vuelo.Valor) * item.cantidad), 0
@@ -742,156 +808,341 @@ const VueloItem = ({ vuelo }) => {
 
         {/* Modal del carrito */}
         <Modal visible={mostrarCarrito} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={[
-            styles.modalContent,
-            isDesktop && styles.modalContentDesktop,
-            styles.carritoModal
-          ]}>
-            <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
-              <Text style={styles.carritoHeader}>🛒 Carrito de Compras</Text>
-              
-              {carrito.length === 0 ? (
-                <Text style={styles.carritoVacio}>El carrito está vacío</Text>
-              ) : (
-                <>
-                  <FlatList
-                    data={carrito}
-                    keyExtractor={(item) => `carrito-${item.idVuelo}`}
-                    renderItem={renderCarritoItem}
-                    style={styles.carritoLista}
-                  />
-                  
-                  <View style={styles.carritoResumen}>
-                    <Text style={styles.carritoTotal}>
-                      Total: ${totalCarrito}
-                    </Text>
-                    <Text style={styles.carritoTotalBoletos}>
-                      {carrito.reduce((sum, item) => sum + item.cantidad, 0)} boleto(s)
-                    </Text>
-                  </View>
-                  <View style={{ marginVertical: 16 }}>
-  <Text style={styles.subheader}>💰 Tipo de Pago</Text>
-  <View style={{ flexDirection: 'row', justifyContent: 'space-evenly', marginBottom: 8 }}>
-    <TouchableOpacity onPress={() => setTipoPago('contado')} style={[styles.btnBuscar, tipoPago === 'contado' && { backgroundColor: '#198754' }]}>
-      <Text style={styles.btnText}>Pago al Contado</Text>
-    </TouchableOpacity>
-    <TouchableOpacity onPress={() => setTipoPago('diferido')} style={[styles.btnBuscar, tipoPago === 'diferido' && { backgroundColor: '#ffc107' }]}>
-      <Text style={styles.btnText}>Pago Diferido</Text>
-    </TouchableOpacity>
-  </View>
-
-  {tipoPago === 'diferido' && (
-    <>
-      <Text style={styles.subheader}>📆 Número de Cuotas</Text>
-      <ScrollView horizontal contentContainerStyle={{ paddingVertical: 6 }} showsHorizontalScrollIndicator={false}>
-        {[1, 3, 6, 12, 15, 24].map((cuota) => (
-          <TouchableOpacity
-            key={cuota}
-            onPress={() => setNumeroCuotas(cuota)}
-            style={{
-              backgroundColor: numeroCuotas === cuota ? '#35798e' : '#dee2e6',
-              padding: 10,
-              borderRadius: 10,
-              marginRight: 10
-            }}>
-            <Text style={{ color: numeroCuotas === cuota ? '#fff' : '#333', fontWeight: 'bold' }}>{cuota} meses</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      <TouchableOpacity
-        style={[styles.btnBuscar, { marginTop: 10, backgroundColor: '#0d6efd' }]}
-        onPress={() => {
-          const total = carrito.reduce((sum, item) => sum + (parseFloat(item.vuelo.Valor) * item.cantidad), 0);
-          const resultado = calcularAmortizacion(total, numeroCuotas, TASA_ANUAL_FIJA);
-          setTablaAmortizacion(resultado);
-          setMostrarTabla(true);
-        }}
+  <View style={styles.modalContainer}>
+    <View style={[
+      styles.modalContent,
+      isDesktop && styles.modalContentDesktop,
+      styles.carritoModal
+    ]}>
+      <ScrollView 
+        contentContainerStyle={{ paddingBottom: 20 }}
+        showsVerticalScrollIndicator={true}
       >
-        <Text style={styles.btnText}>📊 Ver Tabla Amortización</Text>
-      </TouchableOpacity>
-    </>
-  )}
+        <Text style={[
+          styles.carritoHeader,
+          isDesktop && styles.carritoHeaderDesktop
+        ]}>🛒 Carrito de Compras</Text>
+        
+        {carrito.length === 0 ? (
+          <Text style={styles.carritoVacio}>El carrito está vacío</Text>
+        ) : (
+          <>
+            {/* Lista de items del carrito */}
+            <View style={styles.carritoListaContainer}>
+              {carrito.map((item) => (
+                <View key={`carrito-${item.idVuelo}`} style={[
+                  styles.carritoItem,
+                  isDesktop && styles.carritoItemDesktop
+                ]}>
+                  <View style={styles.carritoInfo}>
+  <Text style={[
+    styles.carritoVuelo,
+    isDesktop && { fontSize: 18 }
+  ]}>✈️ {item.vuelo.CodigoVuelo}</Text>
+  
+  <Text style={[
+    styles.carritoRuta,
+    isDesktop && { fontSize: 15 }
+  ]}>
+    {getNombreCiudad(item.vuelo.origen)} → {getNombreCiudad(item.vuelo.destino)}
+  </Text>
+  
+  <Text style={[
+    styles.carritoFecha,
+    isDesktop && { fontSize: 14 }
+  ]}>
+    📅 {formatearFecha(item.vuelo.HoraSalida.split('T')[0])} - {item.vuelo.HoraSalida.split('T')[1].substring(0, 5)}
+  </Text>
+  
+  <Text style={[
+    styles.carritoSubtotal,
+    isDesktop && { fontSize: 16 }
+  ]}>
+    {item.cantidad} × ${item.vuelo.Valor} = ${(parseFloat(item.vuelo.Valor) * item.cantidad).toFixed(2)}
+  </Text>
 </View>
+                  
+                  <View style={styles.carritoControles}>
+                    <TouchableOpacity
+                      onPress={() => actualizarCantidadCarrito(item.idVuelo, item.cantidad - 1)}
+                      style={[
+                        styles.carritoBtn,
+                        item.cantidad <= 1 && styles.carritoBtnDisabled
+                      ]}
+                      disabled={item.cantidad <= 1}
+                    >
+                      <Text style={styles.carritoBtnText}>−</Text>
+                    </TouchableOpacity>
+                    
+                    <Text style={[
+                      styles.carritoCantidad,
+                      isDesktop && { fontSize: 18, minWidth: 40 }
+                    ]}>{item.cantidad}</Text>
+                    
+                    <TouchableOpacity
+                      onPress={() => actualizarCantidadCarrito(item.idVuelo, item.cantidad + 1)}
+                      style={[
+                        styles.carritoBtn,
+                        item.cantidad >= Math.min(item.vuelo.Disponibles, 20) && styles.carritoBtnDisabled
+                      ]}
+                      disabled={item.cantidad >= Math.min(item.vuelo.Disponibles, 20)}
+                    >
+                      <Text style={styles.carritoBtnText}>+</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      onPress={() => removerDelCarrito(item.idVuelo)}
+                      style={styles.carritoEliminar}
+                    >
+                      <Text style={styles.carritoEliminarText}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+            
+            {/* Resumen del carrito */}
+            <View style={[
+              styles.carritoResumen,
+              isDesktop && styles.carritoResumenDesktop
+            ]}>
+              <Text style={[
+                styles.carritoTotal,
+                isDesktop && styles.carritoTotalDesktop
+              ]}>
+                Total: ${totalCarrito}
+              </Text>
+              <Text style={styles.carritoTotalBoletos}>
+                {carrito.reduce((sum, item) => sum + item.cantidad, 0)} boleto(s)
+              </Text>
+            </View>
 
+            {/* Sección de tipo de pago */}
+            <View style={styles.tipoPagoContainer}>
+              <Text style={styles.subheader}>💰 Tipo de Pago</Text>
+              <View style={styles.tipoPagoBotones}>
+                <TouchableOpacity 
+                  onPress={() => setTipoPago('contado')} 
+                  style={[
+                    styles.tipoPagoBtn, 
+                    tipoPago === 'contado' && styles.tipoPagoBtnSelected
+                  ]}
+                >
+                  <Text style={[
+                    styles.tipoPagoBtnText,
+                    tipoPago === 'contado' && styles.tipoPagoBtnTextSelected
+                  ]}>Pago al Contado</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => setTipoPago('diferido')} 
+                  style={[
+                    styles.tipoPagoBtn, 
+                    styles.tipoPagoBtnDiferido,
+                    tipoPago === 'diferido' && styles.tipoPagoBtnSelected
+                  ]}
+                >
+                  <Text style={[
+                    styles.tipoPagoBtnText,
+                    tipoPago === 'diferido' && styles.tipoPagoBtnTextSelected
+                  ]}>Pago Diferido</Text>
+                </TouchableOpacity>
+              </View>
+
+              {tipoPago === 'diferido' && (
+                <View style={styles.cuotasContainer}>
+                  <Text style={styles.cuotasLabel}>📆 Número de Cuotas</Text>
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.cuotasScroll}
+                  >
+                    {[3, 6, 12, 15].map((cuota) => (
+                      <TouchableOpacity
+                        key={cuota}
+                        onPress={() => setNumeroCuotas(cuota)}
+                        style={[
+                          styles.cuotaBtn,
+                          numeroCuotas === cuota && styles.cuotaBtnSelected
+                        ]}
+                      >
+                        <Text style={[
+                          styles.cuotaBtnText,
+                          numeroCuotas === cuota && styles.cuotaBtnTextSelected
+                        ]}>
+                          {cuota} {cuota === 1 ? 'mes' : 'meses'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  <TouchableOpacity
+                    style={styles.btnVerAmortizacion}
+                    onPress={() => {
+                      const total = carrito.reduce((sum, item) => 
+                        sum + (parseFloat(item.vuelo.Valor) * item.cantidad), 0
+                      );
+                      const resultado = calcularAmortizacion(total, numeroCuotas, TASA_ANUAL_FIJA);
+                      setTablaAmortizacion(resultado);
+                      setMostrarTabla(true);
+                    }}
+                  >
+                    <Text style={styles.btnText}>📊 Ver Tabla Amortización</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Botón de comprar */}
+            <TouchableOpacity
+              style={[
+                styles.btnComprarTodo,
+                isDesktop && styles.btnComprarTodoDesktop
+              ]}
+              onPress={procesarCompraMultiple}
+            >
+              <Text style={styles.btnText}>💳 Comprar Todo</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {/* Botón cerrar */}
+        <TouchableOpacity
+          style={styles.modalCloseButton}
+          onPress={() => {
+            setMostrarCarrito(false);
+            setTipoPago('contado');
+            setNumeroCuotas(3);
+          }}
+        >
+          <Text style={styles.modalButtonText}>Cerrar</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
+
+{/* Modal de Tabla de Amortización */}
 <Modal
   visible={mostrarTabla}
   animationType="slide"
   transparent
+  onRequestClose={() => setMostrarTabla(false)}
 >
-  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 16 }}>
-    <View style={{ backgroundColor: 'white', borderRadius: 12, padding: 20, maxHeight: '80%', width: '90%', alignSelf: 'center' }}>
-      <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 12 }}>📄 Resumen de Cuotas:</Text>
-
-      <View style={{ padding: 10, backgroundColor: '#f8f9fa', borderRadius: 8, borderColor: '#dee2e6', borderWidth: 1 }}>
-        <Text style={{ marginBottom: 6 }}>💳 Cuotas Totales: <Text style={{ fontWeight: 'bold' }}>{numeroCuotas}</Text></Text>
-        <Text style={{ marginBottom: 6 }}>💵 Cuota Mensual: <Text style={{ fontWeight: 'bold' }}>${tablaAmortizacion.cuotaMensual}</Text></Text>
-        <Text style={{ marginBottom: 6 }}>📊 Total Intereses: <Text style={{ fontWeight: 'bold', color: '#dc3545' }}>${tablaAmortizacion.interesTotal}</Text></Text>
-        <Text style={{ marginBottom: 6 }}>💰 Total a Pagar: <Text style={{ fontWeight: 'bold' }}>${(numeroCuotas * parseFloat(tablaAmortizacion.cuotaMensual)).toFixed(2)}</Text></Text>
-      </View>
-
-      <TouchableOpacity
-        onPress={() => setMostrarTabla(false)}
-        style={{ backgroundColor: '#dc3545', paddingVertical: 8, paddingHorizontal: 24, alignSelf: 'center', marginTop: 16, borderRadius: 6 }}
+  <View style={styles.modalAmortizacionContainer}>
+    <View style={[
+      styles.modalAmortizacionContent,
+      isDesktop && styles.modalAmortizacionContentDesktop
+    ]}>
+      <ScrollView 
+        contentContainerStyle={styles.modalAmortizacionScroll}
+        showsVerticalScrollIndicator={true}
       >
-        <Text style={{ color: 'white', fontWeight: 'bold' }}>Cerrar</Text>
+        <Text style={styles.modalAmortizacionTitle}>
+          📄 Resumen de Cuotas
+        </Text>
+
+        <View style={styles.resumenAmortizacion}>
+          <View style={styles.resumenRow}>
+            <Text style={styles.resumenLabel}>💳 Cuotas Totales:</Text>
+            <Text style={styles.resumenValue}>{numeroCuotas}</Text>
+          </View>
+          
+          <View style={styles.resumenRow}>
+            <Text style={styles.resumenLabel}>💵 Cuota Mensual:</Text>
+            <Text style={styles.resumenValue}>
+              ${tablaAmortizacion.cuotaMensual}
+            </Text>
+          </View>
+          
+          <View style={styles.resumenRow}>
+            <Text style={styles.resumenLabel}>📊 Total Intereses:</Text>
+            <Text style={[styles.resumenValue, styles.resumenValueRed]}>
+              ${tablaAmortizacion.interesTotal}
+            </Text>
+          </View>
+          
+          <View style={[styles.resumenRow, styles.resumenRowTotal]}>
+            <Text style={styles.resumenLabelTotal}>💰 Total a Pagar:</Text>
+            <Text style={styles.resumenValueTotal}>
+              ${(numeroCuotas * parseFloat(tablaAmortizacion.cuotaMensual || 0)).toFixed(2)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Tabla detallada (opcional - solo para desktop) */}
+        {isDesktop && tablaAmortizacion.tabla && (
+          <View style={styles.tablaDetalleContainer}>
+            <Text style={styles.tablaDetalleTitle}>Detalle por Cuota</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+              <View style={styles.tablaDetalle}>
+                <View style={styles.tablaDetalleHeader}>
+                  <Text style={[styles.tablaDetalleCell, styles.tablaCellSmall]}>Cuota</Text>
+                  <Text style={styles.tablaDetalleCell}>Valor</Text>
+                  <Text style={styles.tablaDetalleCell}>Interés</Text>
+                  <Text style={styles.tablaDetalleCell}>Capital</Text>
+                  <Text style={styles.tablaDetalleCell}>Saldo</Text>
+                </View>
+                {tablaAmortizacion.tabla.map((fila, idx) => (
+                  <View key={idx} style={[
+                    styles.tablaDetalleRow,
+                    idx % 2 === 0 && styles.tablaDetalleRowEven
+                  ]}>
+                    <Text style={[styles.tablaDetalleCell, styles.tablaCellSmall]}>
+                      {fila.cuota}
+                    </Text>
+                    <Text style={styles.tablaDetalleCell}>
+                      ${fila.valorCuota}
+                    </Text>
+                    <Text style={styles.tablaDetalleCell}>
+                      ${fila.interes}
+                    </Text>
+                    <Text style={styles.tablaDetalleCell}>
+                      ${fila.capital}
+                    </Text>
+                    <Text style={styles.tablaDetalleCell}>
+                      ${fila.saldo}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        )}
+
+        <TouchableOpacity
+          onPress={() => setMostrarTabla(false)}
+          style={styles.modalAmortizacionCloseBtn}
+        >
+          <Text style={styles.modalAmortizacionCloseBtnText}>Cerrar</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
+
+        {/* Modal de mensajes */}
+<Modal visible={modalVisible} transparent animationType="fade">
+  <View style={styles.modalMensajeContainer}>
+    <View style={[
+      styles.modalMensajeContent,
+      isDesktop && styles.modalMensajeContentDesktop
+    ]}>
+      <Text style={styles.modalMensajeText}>{mensaje}</Text>
+      <TouchableOpacity
+        style={styles.modalMensajeButton}
+        onPress={() => {
+          setModalVisible(false);
+          if (mensaje.startsWith('✅')) {
+            limpiarFormulario();
+            router.replace({ pathname: '/views/MenuView', params: { idUsuario: usuario } });
+          }
+        }}
+      >
+        <Text style={styles.modalMensajeButtonText}>Aceptar</Text>
       </TouchableOpacity>
     </View>
   </View>
 </Modal>
-                  
-                
-
-
-                  <TouchableOpacity
-                    style={styles.btnComprarTodo}
-                    onPress={procesarCompraMultiple}
-                  >
-                    <Text style={styles.btnText}>💳 Comprar Todo</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => {
-                  setMostrarCarrito(false);
-                  setTipoPago('contado');
-                  setNumeroCuotas(3);
-                }}
-              >
-                <Text style={styles.modalButtonText}>Cerrar</Text>
-              </TouchableOpacity>
-              </ScrollView>
-
-            </View>
-          </View>
-        </Modal>
-
-        {/* Modal de mensajes */}
-        <Modal visible={modalVisible} transparent animationType="slide">
-          <View style={styles.modalContainer}>
-            <View style={[
-              styles.modalContent,
-              isDesktop && styles.modalContentDesktop
-            ]}>
-              <Text style={styles.modalText}>{mensaje}</Text>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={() => {
-                  setModalVisible(false);
-                  if (mensaje.startsWith('✅')) {
-                    limpiarFormulario();
-                    router.replace({ pathname: '/views/MenuView', params: { idUsuario: usuario } });
-                  }
-                }}
-              >
-                <Text style={styles.modalButtonText}>Aceptar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
 
         <View style={styles.volverContainer}>
           <TouchableOpacity
@@ -1352,269 +1603,294 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   
-  // MODAL DEL CARRITO completamente rediseñado
+  // Modal del carrito - Estilos responsive mejorados
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end', // Cambio: modal desde abajo en móvil
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    padding: 16,
   },
   
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    width: '95%', // Móvil más ancho
-    maxWidth: 450,
-    maxHeight: '85%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16, // Reducido para móvil
+    width: '100%',
+    maxHeight: '90%', // Aumentado para aprovechar mejor el espacio
     alignItems: 'stretch',
     elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
-    shadowRadius: 12,
-  },
-  
-  modalContentTablet: {
-    width: '80%',
-    maxWidth: 600,
-    padding: 28,
-    maxHeight: '80%',
+    shadowRadius: 8,
   },
   
   modalContentDesktop: {
+    borderRadius: 24,
     width: '70%',
-    maxWidth: 800, // Mucho más grande en desktop
+    maxWidth: 800,
     padding: 32,
     maxHeight: '85%',
-    borderRadius: 24,
   },
   
-  // Modal específico del carrito
   carritoModal: {
     alignItems: 'stretch',
   },
   
   carritoHeader: {
-    fontSize: 24,
+    fontSize: 20, // Reducido para móvil
     fontWeight: 'bold',
     color: '#35798e',
     textAlign: 'center',
-    marginBottom: 24,
-    paddingBottom: 16,
+    marginBottom: 16,
+    paddingBottom: 12,
     borderBottomWidth: 2,
     borderBottomColor: '#e9ecef',
   },
   
   carritoHeaderDesktop: {
     fontSize: 28,
-    marginBottom: 32,
+    marginBottom: 24,
   },
   
-  carritoVacio: {
-    textAlign: 'center',
-    fontSize: 18,
-    color: '#6c757d',
-    marginVertical: 60,
-    fontStyle: 'italic',
+  // Contenedor de la lista
+  carritoListaContainer: {
+    marginBottom: 16,
   },
   
-  // Lista del carrito mejorada
-  carritoLista: {
-    maxHeight: 300, // Móvil
-    marginBottom: 20,
-  },
-  
-  carritoListaTablet: {
-    maxHeight: 350,
-  },
-  
-  carritoListaDesktop: {
-    maxHeight: 450, // Más alta en desktop
-    marginBottom: 32,
-  },
-  
+  // Item del carrito mejorado para móvil
   carritoItem: {
-    flexDirection: 'row',
     backgroundColor: '#f8f9fa',
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    padding: 12, // Reducido
+    marginBottom: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e9ecef',
   },
   
   carritoItemDesktop: {
+    flexDirection: 'row',
     padding: 20,
     marginBottom: 16,
     borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   
   carritoInfo: {
-    flex: 1,
-    marginRight: 16,
+    marginBottom: 12, // Espacio antes de controles en móvil
   },
   
   carritoVuelo: {
-    fontSize: 16,
+    fontSize: 15, // Reducido
     fontWeight: 'bold',
     color: '#35798e',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   
   carritoRuta: {
-    fontSize: 14,
+    fontSize: 13, // Reducido
     color: '#6c757d',
     marginBottom: 4,
   },
   
   carritoSubtotal: {
-    fontSize: 15,
+    fontSize: 14, // Reducido
     color: '#28a745',
     fontWeight: '600',
   },
   
-  // Controles del carrito mejorados
+  // Controles del carrito optimizados para móvil
   carritoControles: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center', // Centrado en móvil
+    gap: 6, // Reducido
     backgroundColor: '#fff',
-    padding: 8,
-    borderRadius: 12,
+    padding: 6,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#dee2e6',
   },
   
   carritoBtn: {
     backgroundColor: '#35798e',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    minWidth: 36,
+    paddingHorizontal: 10, // Reducido
+    paddingVertical: 6,
+    borderRadius: 6,
+    minWidth: 32, // Reducido
     alignItems: 'center',
     justifyContent: 'center',
   },
   
-  carritoBtnDisabled: {
-    backgroundColor: '#bdc3c7',
-  },
-  
   carritoBtnText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   
   carritoCantidad: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-    minWidth: 35,
+    minWidth: 30,
     textAlign: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     color: '#35798e',
   },
   
   carritoEliminar: {
     backgroundColor: '#dc3545',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 4,
   },
   
   carritoEliminarText: {
-    fontSize: 16,
-    color: '#fff',
+    fontSize: 14,
   },
   
-  // Resumen del carrito mejorado
+  // Resumen mejorado
   carritoResumen: {
     backgroundColor: '#e8f4f8',
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 20,
+    padding: 16, // Reducido
+    borderRadius: 12,
+    marginBottom: 16,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#b8daff',
   },
   
-  carritoResumenDesktop: {
-    padding: 24,
-    marginBottom: 32,
-  },
-  
   carritoTotal: {
-    fontSize: 24,
+    fontSize: 20, // Reducido
     fontWeight: 'bold',
     color: '#35798e',
-    marginBottom: 6,
-  },
-  
-  carritoTotalDesktop: {
-    fontSize: 28,
+    marginBottom: 4,
   },
   
   carritoTotalBoletos: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6c757d',
     fontWeight: '500',
   },
   
-  // Botón comprar todo mejorado
+  // Tipo de pago optimizado para móvil
+  tipoPagoContainer: {
+    marginBottom: 16,
+  },
+  
+  tipoPagoBotones: {
+    flexDirection: 'column', // Vertical en móvil
+    gap: 8,
+    marginTop: 8,
+  },
+  
+  tipoPagoBtn: {
+    backgroundColor: '#e9ecef',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  
+  tipoPagoBtnDiferido: {
+    backgroundColor: '#fff3cd',
+  },
+  
+  tipoPagoBtnSelected: {
+    borderColor: '#35798e',
+    backgroundColor: '#35798e',
+  },
+  
+  tipoPagoBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  
+  tipoPagoBtnTextSelected: {
+    color: '#fff',
+  },
+  
+  // Cuotas mejoradas
+  cuotasContainer: {
+    marginTop: 12,
+  },
+  
+  cuotasLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#333',
+  },
+  
+  cuotasScroll: {
+    paddingVertical: 6,
+  },
+  
+  cuotaBtn: {
+    backgroundColor: '#dee2e6',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  
+  cuotaBtnSelected: {
+    backgroundColor: '#35798e',
+  },
+  
+  cuotaBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+  },
+  
+  cuotaBtnTextSelected: {
+    color: '#fff',
+  },
+  
+  btnVerAmortizacion: {
+    backgroundColor: '#0d6efd',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  
+  // Botón comprar mejorado
   btnComprarTodo: {
     backgroundColor: '#28a745',
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-  },
-  
-  btnComprarTodoDesktop: {
-    paddingVertical: 22,
-    paddingHorizontal: 40,
-    marginBottom: 24,
-  },
-  
-  // Botones de modal mejorados
-  modalButton: {
-    backgroundColor: '#35798e',
     paddingVertical: 14,
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
     borderRadius: 12,
-    minWidth: 120,
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginBottom: 12,
+    elevation: 3,
   },
   
+  // Botón cerrar mejorado
   modalCloseButton: {
     backgroundColor: '#6c757d',
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 12,
-    minWidth: 120,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginTop: 8,
   },
   
   modalButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-  },
-  
+  },  
   modalText: {
     fontSize: 16,
     textAlign: 'center',
@@ -1706,4 +1982,269 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
+  modalAmortizacionContainer: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: 16,
+},
+
+modalAmortizacionContent: {
+  backgroundColor: 'white',
+  borderRadius: 16,
+  padding: 20,
+  width: '90%',
+  maxWidth: 400,
+  maxHeight: '80%',
+  elevation: 10,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.25,
+  shadowRadius: 10,
+},
+
+modalAmortizacionContentDesktop: {
+  maxWidth: 600,
+  padding: 32,
+},
+
+modalAmortizacionScroll: {
+  paddingBottom: 16,
+},
+
+modalAmortizacionTitle: {
+  fontSize: 22,
+  fontWeight: 'bold',
+  color: '#2f6476',
+  textAlign: 'center',
+  marginBottom: 20,
+},
+
+// Resumen de amortización
+resumenAmortizacion: {
+  backgroundColor: '#f8f9fa',
+  borderRadius: 12,
+  padding: 16,
+  borderWidth: 1,
+  borderColor: '#dee2e6',
+  marginBottom: 20,
+},
+
+resumenRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 12,
+  paddingHorizontal: 8,
+},
+
+resumenRowTotal: {
+  marginTop: 12,
+  paddingTop: 12,
+  borderTopWidth: 2,
+  borderTopColor: '#dee2e6',
+  marginBottom: 0,
+},
+
+resumenLabel: {
+  fontSize: 15,
+  color: '#495057',
+  fontWeight: '500',
+},
+
+resumenLabelTotal: {
+  fontSize: 16,
+  color: '#2f6476',
+  fontWeight: 'bold',
+},
+
+resumenValue: {
+  fontSize: 16,
+  fontWeight: 'bold',
+  color: '#212529',
+},
+
+resumenValueRed: {
+  color: '#dc3545',
+},
+
+resumenValueTotal: {
+  fontSize: 18,
+  fontWeight: 'bold',
+  color: '#2f6476',
+},
+
+// Tabla detallada (desktop)
+tablaDetalleContainer: {
+  marginTop: 20,
+  backgroundColor: '#fff',
+  borderRadius: 8,
+  padding: 12,
+  borderWidth: 1,
+  borderColor: '#dee2e6',
+},
+
+tablaDetalleTitle: {
+  fontSize: 16,
+  fontWeight: '600',
+  marginBottom: 12,
+  color: '#495057',
+  textAlign: 'center',
+},
+
+tablaDetalle: {
+  minWidth: 500,
+},
+
+tablaDetalleHeader: {
+  flexDirection: 'row',
+  backgroundColor: '#f0f0f0',
+  paddingVertical: 10,
+  paddingHorizontal: 5,
+  borderTopLeftRadius: 6,
+  borderTopRightRadius: 6,
+},
+
+tablaDetalleRow: {
+  flexDirection: 'row',
+  paddingVertical: 8,
+  paddingHorizontal: 5,
+  borderBottomWidth: 1,
+  borderBottomColor: '#eee',
+},
+
+tablaDetalleRowEven: {
+  backgroundColor: '#f9f9f9',
+},
+
+tablaDetalleCell: {
+  width: 90,
+  textAlign: 'center',
+  fontSize: 14,
+  color: '#212529',
+},
+
+tablaCellSmall: {
+  width: 50,
+  fontWeight: 'bold',
+},
+
+// Botón cerrar amortización
+modalAmortizacionCloseBtn: {
+  backgroundColor: '#dc3545',
+  paddingVertical: 12,
+  paddingHorizontal: 32,
+  borderRadius: 8,
+  alignSelf: 'center',
+  marginTop: 16,
+  elevation: 2,
+},
+
+modalAmortizacionCloseBtnText: {
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 16,
+},
+modalMensajeContainer: {
+  flex: 1,
+  justifyContent: 'center', // IMPORTANTE: Centrado vertical
+  alignItems: 'center',
+  backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  padding: 20,
+},
+
+modalMensajeContent: {
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  padding: 24,
+  width: '90%',
+  maxWidth: 400,
+  alignItems: 'center',
+  elevation: 10,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.25,
+  shadowRadius: 10,
+},
+
+modalMensajeContentDesktop: {
+  padding: 32,
+  maxWidth: 500,
+},
+
+modalMensajeText: {
+  fontSize: 16,
+  textAlign: 'center',
+  marginBottom: 24,
+  lineHeight: 24,
+  color: '#333',
+  paddingHorizontal: 8,
+},
+
+modalMensajeButton: {
+  backgroundColor: '#35798e',
+  paddingVertical: 14,
+  paddingHorizontal: 32,
+  borderRadius: 12,
+  minWidth: 120,
+  alignItems: 'center',
+  elevation: 3,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.15,
+  shadowRadius: 4,
+},
+
+modalMensajeButtonText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: 'bold',
+},
+
+// Opcional: Si quieres diferenciar entre mensajes de éxito y error
+modalMensajeSuccess: {
+  borderTopWidth: 4,
+  borderTopColor: '#28a745',
+},
+
+modalMensajeError: {
+  borderTopWidth: 4,
+  borderTopColor: '#dc3545',
+},
+// Estilos para restricción de fecha
+cardRestricted: {
+  opacity: 0.8,
+  borderWidth: 2,
+  borderColor: '#ffc107',
+  backgroundColor: '#fffbf0',
+},
+
+restriccionFecha: {
+  backgroundColor: '#fff3cd',
+  padding: 12,
+  borderRadius: 8,
+  marginVertical: 8,
+  borderLeftWidth: 4,
+  borderLeftColor: '#ffc107',
+},
+
+restriccionFechaText: {
+  fontSize: 14,
+  color: '#856404',
+  textAlign: 'center',
+  fontWeight: '600',
+},
+
+btnAgregarDisabled: {
+  backgroundColor: '#6c757d',
+  opacity: 0.7,
+},
+
+carritoFecha: {
+  fontSize: 12,
+  color: '#0d6efd',
+  marginBottom: 4,
+  fontWeight: '500',
+},
 })

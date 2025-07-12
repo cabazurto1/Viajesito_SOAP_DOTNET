@@ -30,10 +30,16 @@ export default function MenuView() {
     });
   };
 
-  const cerrarSesion = async () => {
-    await AsyncStorage.clear(); // Elimina todo, incluyendo idUsuario
+const cerrarSesion = async () => {
+  await AsyncStorage.clear();
+  await AsyncStorage.removeItem('app_reloaded_session'); // ❗ para que LoginView recargue
+
+  // Pequeño delay para asegurar desmontaje
+  setTimeout(() => {
     router.replace('/');
-  };
+  }, 100);
+};
+
 
   return (
     <BackgroundWrapper>
@@ -72,6 +78,13 @@ export default function MenuView() {
               <MaterialIcons name="shopping-cart" size={28} color="#35798e" />
               <Text style={styles.label}>Comprar Boletos</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+            style={styles.option}
+            onPress={() => handleNavigation('FacturasView')}
+          >
+            <MaterialIcons name="receipt-long" size={28} color="#35798e" />
+            <Text style={styles.label}>Ver Facturas</Text>
+          </TouchableOpacity>
           </ScrollView>
 
           <TouchableOpacity
